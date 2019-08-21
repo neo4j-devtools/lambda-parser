@@ -5,10 +5,11 @@
   "module": "grammar.js",
   "type": "module",
   "scripts": {
-    "test": "jest",
+    "test": "npm run build && jest",
     "build": "nearleyc grammar.ne -o grammar.js",
     "parse": "node --experimental-modules --es-module-specifier-resolution=node debug.js",
-    "debug": "npm run build && npm run parse"
+    "debug": "npm run build && npm run parse",
+    "railroad": "npx nearley-railroad grammar.ne -o railroad.html"
   },
   "author": "huboneo",
   "license": "MIT",

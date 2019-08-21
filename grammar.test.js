@@ -9,21 +9,45 @@ describe('lambda-parser', () => {
                     variant: 'implicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
-                        return: {
+                        return: [{
                             name: '"foo"',
-                            original: {
+                            from: [{
                                 type: 'string',
-                                tokens: ['foo']
-                            }
-                        }
+                                value: 'foo'
+                            }]
+                        }]
                     }
                 }
             ])
+        });
+
+        test('support tokens with numbers in their names', () => {
+            expect(parseLambda('x1 => "foo"')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x1'
+                    },
+                    body: {
+                        return: [{
+                            name: '"foo"',
+                            from: [{
+                                type: 'string',
+                                value: 'foo'
+                            }]
+                        }]
+                    }
+                }
+            ])
+        });
+
+        test('does not support tokens with numbers first in their names', () => {
+            expect(() => parseLambda('1x => "foo"')).toThrow('Syntax error at line 1 col 1:');
         });
 
         test('supports integers', () => {
@@ -33,18 +57,16 @@ describe('lambda-parser', () => {
                     variant: 'implicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
-                        return: {
+                        return: [{
                             name: '1',
-                            original: {
+                            from: [{
                                 type: 'number',
-                                tokens: [1]
-                            }
-                        }
+                                value: 1
+                            }]
+                        }]
                     }
                 }
             ])
@@ -57,19 +79,17 @@ describe('lambda-parser', () => {
                     variant: 'implicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
-                        return: {
+                        return: [{
                             name: 'rand()',
-                            original: {
+                            from: [{
                                 name: 'rand',
                                 type: 'functionCall',
                                 args: []
-                            }
-                        }
+                            }]
+                        }]
                     }
                 }
             ])
@@ -82,19 +102,17 @@ describe('lambda-parser', () => {
                     variant: 'implicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
-                        return: {
+                        return: [{
                             name: 'foo(a,b,c)',
-                            original: {
+                            from: [{
                                 name: 'foo',
                                 type: 'functionCall',
                                 args: ['a', 'b', 'c']
-                            }
-                        }
+                            }]
+                        }]
                     }
                 }
             ])
@@ -107,19 +125,17 @@ describe('lambda-parser', () => {
                     variant: 'implicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
-                        return: {
+                        return: [{
                             name: 'foo(a,b,c)',
-                            original: {
+                            from: [{
                                 name: 'foo',
                                 type: 'functionCall',
                                 args: ['a', 'b', 'c']
-                            }
-                        }
+                            }]
+                        }]
                     }
                 }
             ])
@@ -132,18 +148,16 @@ describe('lambda-parser', () => {
                     variant: 'implicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
-                        return: {
+                        return: [{
                             name: 'bar',
-                            original: {
+                            from: [{
                                 type: 'string',
-                                tokens: ['foo']
-                            }
-                        }
+                                value: 'foo'
+                            }]
+                        }]
                     }
                 }
             ])
@@ -156,19 +170,40 @@ describe('lambda-parser', () => {
                     variant: 'implicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
-                        return: {
+                        return: [{
                             name: 'bar',
-                            original: {
+                            from: [{
                                 name: 'rand',
                                 type: 'functionCall',
                                 args: []
-                            }
-                        }
+                            }]
+                        }]
+                    }
+                }
+            ])
+        });
+
+        test('supports AS keyword regardless of casing', () => {
+            expect(parseLambda('x => rand() aS bar')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        return: [{
+                            name: 'bar',
+                            from: [{
+                                name: 'rand',
+                                type: 'functionCall',
+                                args: []
+                            }]
+                        }]
                     }
                 }
             ])
@@ -176,6 +211,139 @@ describe('lambda-parser', () => {
 
         test('does not support destructuring', () => {
             expect(() => parseLambda('[x] => rand() AS bar')).toThrow('Syntax error at line 1 col 8:')
+        });
+
+
+        test('Supports returning function calls with object path (number)', () => {
+            const query = `x => COLLECT(label)[0]`;
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        return: [{
+                            name: 'COLLECT(label)[0]',
+                            from: [
+                                {
+                                    type: 'functionCall',
+                                    name: 'COLLECT',
+                                    args: [
+                                        'label'
+                                    ]
+                                },
+                                {
+                                    type: 'path',
+                                    variant: 'number',
+                                    value: '[0]'
+                                }
+                            ]
+                        }]
+                    }
+                }
+            ])
+        });
+
+        test('Supports returning function calls with object path (string)', () => {
+            const query = `x => COLLECT(label)["123 hurr durr"]`;
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        return: [{
+                            name: 'COLLECT(label)["123 hurr durr"]',
+                            from: [
+                                {
+                                    type: 'functionCall',
+                                    name: 'COLLECT',
+                                    args: [
+                                        'label'
+                                    ]
+                                },
+                                {
+                                    type: 'path',
+                                    variant: 'string',
+                                    value: '["123 hurr durr"]'
+                                }
+                            ]
+                        }]
+                    }
+                }
+            ])
+        });
+
+        test('Supports returning function calls with object path (token)', () => {
+            const query = `x => COLLECT(label).foo`;
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        return: [{
+                            name: 'COLLECT(label).foo',
+                            from: [
+                                {
+                                    type: 'functionCall',
+                                    name: 'COLLECT',
+                                    args: [
+                                        'label'
+                                    ]
+                                },
+                                {
+                                    type: 'path',
+                                    variant: 'token',
+                                    value: '.foo'
+                                }
+                            ]
+                        }]
+                    }
+                }
+            ])
+        });
+
+        test('Supports returning function calls with object path using AS', () => {
+            const query = `x => COLLECT(label)[0] AS foo`;
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        return: [{
+                            name: 'foo',
+                            from: [
+                                {
+                                    type: 'functionCall',
+                                    name: 'COLLECT',
+                                    args: [
+                                        'label'
+                                    ]
+                                },
+                                {
+                                    type: 'path',
+                                    variant: 'number',
+                                    value: '[0]'
+                                }
+                            ]
+                        }]
+                    }
+                }
+            ])
         });
     });
 
@@ -187,24 +355,51 @@ describe('lambda-parser', () => {
                     variant: 'explicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
                         statement: '',
                         return: [
                             {
                                 name: '"foo"',
-                                original: {
+                                from: [{
                                     type: 'string',
-                                    tokens: ['foo']
-                                }
+                                    value: 'foo'
+                                }]
                             }
                         ]
                     }
                 }
             ])
+        });
+
+        test('support tokens with numbers in their names', () => {
+            expect(parseLambda('x1 => { RETURN "foo" }')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x1'
+                    },
+                    body: {
+                        statement: '',
+                        return: [
+                            {
+                                name: '"foo"',
+                                from: [{
+                                    type: 'string',
+                                    value: 'foo'
+                                }]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('does not support tokens with numbers first in their names', () => {
+            expect(() => parseLambda('1x => { RETURN "foo" }')).toThrow('Syntax error at line 1 col 1:');
         });
 
         test('supports integers', () => {
@@ -214,19 +409,17 @@ describe('lambda-parser', () => {
                     variant: 'explicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
                         statement: '',
                         return: [
                             {
                                 name: '1',
-                                original: {
+                                from: [{
                                     type: 'number',
-                                    tokens: [1]
-                                }
+                                    value: 1
+                                }]
                             }
                         ]
                     }
@@ -241,20 +434,18 @@ describe('lambda-parser', () => {
                     variant: 'explicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
                         statement: '',
                         return: [
                             {
                                 name: 'rand()',
-                                original: {
+                                from: [{
                                     name: 'rand',
                                     type: 'functionCall',
                                     args: []
-                                }
+                                }]
                             }
                         ]
                     }
@@ -269,20 +460,18 @@ describe('lambda-parser', () => {
                     variant: 'explicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
                         statement: '',
                         return: [
                             {
                                 name: 'foo(a,b,c)',
-                                original: {
+                                from: [{
                                     name: 'foo',
                                     type: 'functionCall',
                                     args: ['a', 'b', 'c']
-                                }
+                                }]
                             }
                         ]
                     }
@@ -297,20 +486,18 @@ describe('lambda-parser', () => {
                     variant: 'explicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
                         statement: '',
                         return: [
                             {
                                 name: 'foo(a,b,c)',
-                                original: {
+                                from: [{
                                     name: 'foo',
                                     type: 'functionCall',
                                     args: ['a', 'b', 'c']
-                                }
+                                }]
                             }
                         ]
                     }
@@ -325,19 +512,17 @@ describe('lambda-parser', () => {
                     variant: 'explicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
                         statement: '',
                         return: [
                             {
                                 name: 'bar',
-                                original: {
+                                from: [{
                                     type: 'string',
-                                    tokens: ['foo']
-                                }
+                                    value: 'foo'
+                                }]
                             }
                         ]
                     }
@@ -352,20 +537,44 @@ describe('lambda-parser', () => {
                     variant: 'explicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
                         statement: '',
                         return: [
                             {
                                 name: 'bar',
-                                original: {
+                                from: [{
                                     name: 'rand',
                                     type: 'functionCall',
                                     args: []
-                                }
+                                }]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('supports AS keyword regardless of casing', () => {
+            expect(parseLambda('x => { RETURN rand() as bar }')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        statement: '',
+                        return: [
+                            {
+                                name: 'bar',
+                                from: [{
+                                    name: 'rand',
+                                    type: 'functionCall',
+                                    args: []
+                                }]
                             }
                         ]
                     }
@@ -380,20 +589,18 @@ describe('lambda-parser', () => {
                     variant: 'explicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
                         statement: '',
                         return: [
                             {
                                 name: 'bar',
-                                original: {
+                                from: [{
                                     name: 'rand',
                                     type: 'functionCall',
                                     args: []
-                                }
+                                }]
                             }
                         ]
                     }
@@ -410,20 +617,18 @@ describe('lambda-parser', () => {
                     variant: 'explicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
                         statement,
                         return: [
                             {
                                 name: 'bar',
-                                original: {
+                                from: [{
                                     name: 'rand',
                                     type: 'functionCall',
                                     args: []
-                                }
+                                }]
                             }
                         ]
                     }
@@ -448,20 +653,18 @@ asdjokajsd
                     variant: 'explicit',
                     parameters: {
                         type: 'token',
-                        tokens: [
-                            'x'
-                        ]
+                        value: 'x'
                     },
                     body: {
                         statement,
                         return: [
                             {
                                 name: 'bar',
-                                original: {
+                                from: [{
                                     name: 'rand',
                                     type: 'functionCall',
                                     args: []
-                                }
+                                }]
                             }
                         ]
                     }
@@ -479,9 +682,7 @@ asdjokajsd
                         items: [
                             {
                                 type: 'token',
-                                tokens: [
-                                    'x'
-                                ]
+                                value: 'x'
                             }
                         ]
                     },
@@ -490,11 +691,11 @@ asdjokajsd
                         return: [
                             {
                                 name: 'bar',
-                                original: {
+                                from: [{
                                     type: 'functionCall',
                                     name: 'rand',
                                     args: []
-                                }
+                                }]
                             }
                         ]
                     }
@@ -512,7 +713,7 @@ asdjokajsd
                         items: [
                             {
                                 type: 'object',
-                                tokens: [
+                                keys: [
                                     'x'
                                 ]
                             }
@@ -523,11 +724,11 @@ asdjokajsd
                         return: [
                             {
                                 name: 'bar',
-                                original: {
+                                from: [{
                                     type: 'functionCall',
                                     name: 'rand',
                                     args: []
-                                }
+                                }]
                             }
                         ]
                     }
@@ -545,14 +746,78 @@ asdjokajsd
                         items: [
                             {
                                 type: 'object',
-                                tokens: [
+                                keys: [
                                     'x'
                                 ]
                             },
                             {
                                 type: 'token',
-                                tokens: [
-                                    'y'
+                                value: 'y'
+                            }
+                        ]
+                    },
+                    body: {
+                        statement: '',
+                        return: [
+                            {
+                                name: 'bar',
+                                from: [{
+                                    type: 'functionCall',
+                                    name: 'rand',
+                                    args: []
+                                }]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('supports renaming of destructured objects keys when returning functions', () => {
+            expect(parseLambda('[{rand():x}] => { RETURN rand() }')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'array',
+                        items: [
+                            {
+                                type: 'object',
+                                keys: [
+                                    'x'
+                                ]
+                            }
+                        ]
+                    },
+                    body: {
+                        statement: '',
+                        return: [
+                            {
+                                name: 'rand()',
+                                from: [{
+                                    type: 'functionCall',
+                                    name: 'rand',
+                                    args: []
+                                }]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('supports renaming of destructured objects keys when returning renamed functions ', () => {
+            expect(parseLambda('[{bar:x}] => { RETURN rand() AS bar }')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'array',
+                        items: [
+                            {
+                                type: 'object',
+                                keys: [
+                                    'x'
                                 ]
                             }
                         ]
@@ -562,11 +827,259 @@ asdjokajsd
                         return: [
                             {
                                 name: 'bar',
-                                original: {
+                                from: [{
                                     type: 'functionCall',
                                     name: 'rand',
                                     args: []
-                                }
+                                }]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('supports renaming of destructured objects keys when returning tokens ', () => {
+            expect(parseLambda('[{bar:x}] => { RETURN bar }')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'array',
+                        items: [
+                            {
+                                type: 'object',
+                                keys: [
+                                    'x'
+                                ]
+                            }
+                        ]
+                    },
+                    body: {
+                        statement: '',
+                        return: [
+                            {
+                                name: 'bar',
+                                from: [{
+                                    type: 'token',
+                                    value: 'bar'
+                                }]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('supports renaming of destructured objects keys when returning renamed values ', () => {
+            expect(parseLambda('[{bar:x}] => { RETURN "foo" AS bar }')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'array',
+                        items: [
+                            {
+                                type: 'object',
+                                keys: [
+                                    'x'
+                                ]
+                            }
+                        ]
+                    },
+                    body: {
+                        statement: '',
+                        return: [
+                            {
+                                name: 'bar',
+                                from: [{
+                                    type: 'string',
+                                    value: 'foo'
+                                }]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('Supports returning function calls with object path (number)', () => {
+            const query = `[{x}] => {
+                CALL db.labels() YIELD label
+                RETURN COLLECT(label)[0]
+            }`;
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'array',
+                        items: [
+                            {
+                                type: 'object',
+                                keys: [
+                                    'x'
+                                ]
+                            }
+                        ]
+                    },
+                    body: {
+                        statement: 'CALL db.labels() YIELD label',
+                        return: [
+                            {
+                                name: 'COLLECT(label)[0]',
+                                from: [
+                                    {
+                                        type: 'functionCall',
+                                        name: 'COLLECT',
+                                        args: [
+                                            'label'
+                                        ]
+                                    },
+                                    {
+                                        type: 'path',
+                                        variant: 'number',
+                                        value: '[0]'
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('Supports returning function calls with object path (string)', () => {
+            const query = `[{x}] => {
+                CALL db.labels() YIELD label
+                RETURN COLLECT(label)["123 hurr durr"]
+            }`;
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'array',
+                        items: [
+                            {
+                                type: 'object',
+                                keys: [
+                                    'x'
+                                ]
+                            }
+                        ]
+                    },
+                    body: {
+                        statement: 'CALL db.labels() YIELD label',
+                        return: [
+                            {
+                                name: 'COLLECT(label)["123 hurr durr"]',
+                                from: [
+                                    {
+                                        type: 'functionCall',
+                                        name: 'COLLECT',
+                                        args: [
+                                            'label'
+                                        ]
+                                    },
+                                    {
+                                        type: 'path',
+                                        variant: 'string',
+                                        value: '["123 hurr durr"]'
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('Supports returning function calls with object path (token)', () => {
+            const query = `[{x}] => {
+                CALL db.labels() YIELD label
+                RETURN COLLECT(label).foo
+            }`;
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'array',
+                        items: [
+                            {
+                                type: 'object',
+                                keys: [
+                                    'x'
+                                ]
+                            }
+                        ]
+                    },
+                    body: {
+                        statement: 'CALL db.labels() YIELD label',
+                        return: [
+                            {
+                                name: 'COLLECT(label).foo',
+                                from: [
+                                    {
+                                        type: 'functionCall',
+                                        name: 'COLLECT',
+                                        args: [
+                                            'label'
+                                        ]
+                                    },
+                                    {
+                                        type: 'path',
+                                        variant: 'token',
+                                        value: '.foo'
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('Supports returning function calls with object path using AS', () => {
+            const query = `[{x}] => {
+                CALL db.labels() YIELD label
+                RETURN COLLECT(label)[0] AS foo
+            }`;
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'array',
+                        items: [
+                            {
+                                type: 'object',
+                                keys: [
+                                    'x'
+                                ]
+                            }
+                        ]
+                    },
+                    body: {
+                        statement: 'CALL db.labels() YIELD label',
+                        return: [
+                            {
+                                name: 'foo',
+                                from: [
+                                    {
+                                        type: 'functionCall',
+                                        name: 'COLLECT',
+                                        args: [
+                                            'label'
+                                        ]
+                                    },
+                                    {
+                                        type: 'path',
+                                        variant: 'number',
+                                        value: '[0]'
+                                    }
+                                ]
                             }
                         ]
                     }

@@ -1,40 +1,13 @@
 import parseLambda from './parse-lambda';
 
-const something = `[x] => {
-    jdashjdlija   sldjaslkdmla
-    asdadsadsad
-
-    MATCH (n) RETURN n;
-    CREATE (m {fooo})
-
-
-
-sadasd
-sadsndasjdpjaspd
-
-{
-    dasohdoiasjkm
-    {
-        dhakshdkjasnk
-    }
-}
-
-
-
-
-    
-
-asdasdn  asdasdasd 
-    dansdhaskjd
-
-    asdkjasndkljaslj
-    
-    return rand() AS bar
-}`;
+const something = `[{x}] => {
+    CALL db.labels() YIELD label
+    RETURN COLLECT(label)[0] AS x
+  }`;
 const result1 = parseLambda(something)
 const result2 = parseLambda('x => {asdsd RETURN rand() }')
-const result3 = parseLambda('[{x}] => { RETURN rand() AS bar }')
-const result4 = parseLambda('x => rand()')
+const result3 = parseLambda('[{rand():x}] => { RETURN rand() AS bar }')
+const result4 = parseLambda('x1 => "foo"')
 
-console.log(JSON.stringify(result3, null, 2));
-console.log(`Ambiguity ${result3.length}`)
+console.log(JSON.stringify(result1, null, 2));
+console.log(`Ambiguity ${result1.length}`)
