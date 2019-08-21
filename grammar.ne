@@ -11,12 +11,12 @@ lambda -> explicitParameters FAT_ARROW explicitReturn {% ([parameters,,body]) =>
     | implicitParameters FAT_ARROW implicitReturn {% ([parameters,,body]) => ({type: 'lambda', variant: 'implicit', parameters, body}) %}
 
 # { RETURN ... }
-explicitReturn -> L_CURLY multiLine __ RETURN returnValues R_CURLY {% ([,statement,,, value]) => ({statement, return: value}) %}
-    | L_CURLY singleLine __ RETURN returnValues R_CURLY {% ([,statement,,, value]) => ({statement, return: value}) %}
-    | L_CURLY _ RETURN returnValues R_CURLY {% ([,,, value]) => ({statement: '', return: value}) %}
+explicitReturn -> L_CURLY multiLine __ RETURN returnValues R_CURLY {% ([,statement,,, returnValues]) => ({statement, returnValues}) %}
+    | L_CURLY singleLine __ RETURN returnValues R_CURLY {% ([,statement,,, returnValues]) => ({statement, returnValues}) %}
+    | L_CURLY _ RETURN returnValues R_CURLY {% ([,,, returnValues]) => ({statement: '', returnValues}) %}
 
 # [foo, {bar}] => ...
-implicitReturn -> returnValue {% ([value]) => ({return: [value]}) %}
+implicitReturn -> returnValue {% ([returnValue]) => ({returnValues: [returnValue]}) %}
 
 # RETURN hi AS foo, rand() AS bar
 returnValues -> returnValue COMMA returnValues {% ([hit,, rest]) => [hit, ...rest] %}
@@ -24,23 +24,22 @@ returnValues -> returnValue COMMA returnValues {% ([hit,, rest]) => [hit, ...res
 
 # RETURN hi AS foo
 # RETURN rand() AS bar
-returnValue -> functionCall AS token {% ([func,, name]) => ({name: name.value, from: [func]}) %}
-    | functionCall objectPath AS token {% ([func, path,, name]) => ({name: name.value, from: [func, path]}) %}
-    | token AS token {% ([token,, name]) => ({name: name.value, from: [token]}) %}
-    | token objectPath AS token {% ([token, path,, name]) => ({name: name.value, from: [token, path]}) %}
-    | number AS token {% ([num,, name]) => ({name: name.value, from: [num]}) %}
-    | string AS token {% ([str,, name]) => ({name: name.value, from: [str]}) %}
-    | token {% ([token]) => ({ name: token.value, from: [token]}) %}
-    | token objectPath {% ([token, path]) => ({ name: `${token.value}${path.value}`, from: [token, path]}) %}
+returnValue -> return AS token {% ([original,, name]) => ({...original, alias: name.value}) %}
+    | return {% id %}
+
+# RETURN hi AS foo
+# RETURN rand() AS bar
+return -> token {% ([token]) => ({ name: token.value, from: [token]}) %}
+    | token nestedObjectPath {% ([token, path]) => ({ name: `${token.value}${path.map(({value}) => value).join('')}`, from: [token, ...path]}) %}
     | number {% ([num]) => ({ name: `${num.value}`, from: [num]}) %}
     | string {% ([str]) => ({ name: `"${str.value}"`, from: [str]}) %}
     | functionCall {% ([func]) => ({
         name: `${func.name}(${func.args.join()})`, // whitespace is lost...
         from: [func],
     }) %}
-    | functionCall objectPath {% ([func, path]) => ({
-        name: `${func.name}(${func.args.join()})${path.value}`, // whitespace is lost...
-        from: [func, path],
+    | functionCall nestedObjectPath {% ([func, path]) => ({
+        name: `${func.name}(${func.args.join()})${path.map(({value}) => value).join('')}`, // whitespace is lost...
+        from: [func, ...path],
     }) %}
 
 # [x]
@@ -63,6 +62,13 @@ items -> item COMMA items {% ([hit,, rest]) => [hit, ...rest] %}
 item -> object {% id %}
     | token {% id %}
 
+# [0].foo["yolo"]
+nestedObjectPath -> objectPath nestedObjectPath {% ([path, rest]) => [path, ...rest] %}
+    | objectPath
+
+# [0]
+# ["hurr durr"]
+# .foo
 objectPath -> L_SQUARE number R_SQUARE {% ([, index]) => ({type: 'path', variant: index.type, value: `[${index.value}]`}) %}
     | L_SQUARE string R_SQUARE {% ([, key]) => ({type: 'path', variant: key.type, value: `["${key.value}"]`}) %}
     | DOT token {% ([, key]) => ({type: 'path', variant: key.type, value: `.${key.value}`}) %}
@@ -113,4 +119,4 @@ L_PAREN -> _ "(" {% () => ['L_PAREN'] %}
 R_PAREN -> _ ")" {% () => ['R_PAREN'] %}
 FAT_ARROW -> _ "=>" {% () => ['F_ARROW'] %}
 RETURN -> "RETURN"i __ {% () => ['RETURN'] %}
-AS -> _ "AS"i {% () => ['AS'] %}
+AS -> __ "AS"i {% () => ['AS'] %}

@@ -1,8 +1,8 @@
 {
-  "name": "lamdba-parser",
+  "name": "lambda-parser",
   "version": "1.0.0",
   "description": "",
-  "module": "grammar.js",
+  "module": "parse-lambda.js",
   "type": "module",
   "scripts": {
     "test": "npm run build && jest",

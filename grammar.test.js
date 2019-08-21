@@ -12,7 +12,7 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
+                        returnValues: [{
                             name: '"foo"',
                             from: [{
                                 type: 'string',
@@ -34,7 +34,7 @@ describe('lambda-parser', () => {
                         value: 'x1'
                     },
                     body: {
-                        return: [{
+                        returnValues: [{
                             name: '"foo"',
                             from: [{
                                 type: 'string',
@@ -60,11 +60,33 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
+                        returnValues: [{
                             name: '1',
                             from: [{
                                 type: 'number',
                                 value: 1
+                            }]
+                        }]
+                    }
+                }
+            ])
+        });
+
+        test('supports floats', () => {
+            expect(parseLambda('x => 1.1')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        returnValues: [{
+                            name: '1.1',
+                            from: [{
+                                type: 'number',
+                                value: 1.1
                             }]
                         }]
                     }
@@ -82,7 +104,7 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
+                        returnValues: [{
                             name: 'rand()',
                             from: [{
                                 name: 'rand',
@@ -105,7 +127,7 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
+                        returnValues: [{
                             name: 'foo(a,b,c)',
                             from: [{
                                 name: 'foo',
@@ -128,7 +150,7 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
+                        returnValues: [{
                             name: 'foo(a,b,c)',
                             from: [{
                                 name: 'foo',
@@ -151,8 +173,9 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
-                            name: 'bar',
+                        returnValues: [{
+                            name: '"foo"',
+                            alias: 'bar',
                             from: [{
                                 type: 'string',
                                 value: 'foo'
@@ -173,8 +196,9 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
-                            name: 'bar',
+                        returnValues: [{
+                            name: 'rand()',
+                            alias: 'bar',
                             from: [{
                                 name: 'rand',
                                 type: 'functionCall',
@@ -196,8 +220,9 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
-                            name: 'bar',
+                        returnValues: [{
+                            name: 'rand()',
+                            alias: 'bar',
                             from: [{
                                 name: 'rand',
                                 type: 'functionCall',
@@ -216,6 +241,7 @@ describe('lambda-parser', () => {
 
         test('Supports returning function calls with object path (number)', () => {
             const query = `x => COLLECT(label)[0]`;
+
             expect(parseLambda(query)).toEqual([
                 {
                     type: 'lambda',
@@ -225,7 +251,7 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
+                        returnValues: [{
                             name: 'COLLECT(label)[0]',
                             from: [
                                 {
@@ -249,6 +275,7 @@ describe('lambda-parser', () => {
 
         test('Supports returning function calls with object path (string)', () => {
             const query = `x => COLLECT(label)["123 hurr durr"]`;
+
             expect(parseLambda(query)).toEqual([
                 {
                     type: 'lambda',
@@ -258,7 +285,7 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
+                        returnValues: [{
                             name: 'COLLECT(label)["123 hurr durr"]',
                             from: [
                                 {
@@ -282,6 +309,7 @@ describe('lambda-parser', () => {
 
         test('Supports returning function calls with object path (token)', () => {
             const query = `x => COLLECT(label).foo`;
+
             expect(parseLambda(query)).toEqual([
                 {
                     type: 'lambda',
@@ -291,7 +319,7 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
+                        returnValues: [{
                             name: 'COLLECT(label).foo',
                             from: [
                                 {
@@ -313,8 +341,9 @@ describe('lambda-parser', () => {
             ])
         });
 
-        test('Supports returning function calls with object path using AS', () => {
-            const query = `x => COLLECT(label)[0] AS foo`;
+        test('Supports returning function calls with deep object path', () => {
+            const query = `x => COLLECT(label)[0].foo["yolo"]`;
+
             expect(parseLambda(query)).toEqual([
                 {
                     type: 'lambda',
@@ -324,8 +353,55 @@ describe('lambda-parser', () => {
                         value: 'x'
                     },
                     body: {
-                        return: [{
-                            name: 'foo',
+                        returnValues: [
+                            {
+                                name: 'COLLECT(label)[0].foo["yolo"]',
+                                from: [
+                                    {
+                                        type: 'functionCall',
+                                        name: 'COLLECT',
+                                        args: [
+                                            'label'
+                                        ]
+                                    },
+                                    {
+                                        type: 'path',
+                                        variant: 'number',
+                                        value: '[0]'
+                                    },
+                                    {
+                                        type: 'path',
+                                        variant: 'token',
+                                        value: '.foo'
+                                    },
+                                    {
+                                        type: 'path',
+                                        variant: 'string',
+                                        value: '["yolo"]'
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('Supports returning function calls with object path using AS', () => {
+            const query = `x => COLLECT(label)[0] AS foo`;
+
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        returnValues: [{
+                            name: 'COLLECT(label)[0]',
+                            alias: 'foo',
                             from: [
                                 {
                                     type: 'functionCall',
@@ -359,7 +435,7 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
                                 name: '"foo"',
                                 from: [{
@@ -384,7 +460,7 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
                                 name: '"foo"',
                                 from: [{
@@ -413,12 +489,37 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
                                 name: '1',
                                 from: [{
                                     type: 'number',
                                     value: 1
+                                }]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('supports floats', () => {
+            expect(parseLambda('x => { RETURN 1.1 }')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        statement: '',
+                        returnValues: [
+                            {
+                                name: '1.1',
+                                from: [{
+                                    type: 'number',
+                                    value: 1.1
                                 }]
                             }
                         ]
@@ -438,7 +539,7 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
                                 name: 'rand()',
                                 from: [{
@@ -464,7 +565,7 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
                                 name: 'foo(a,b,c)',
                                 from: [{
@@ -490,7 +591,7 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
                                 name: 'foo(a,b,c)',
                                 from: [{
@@ -516,9 +617,10 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: '"foo"',
+                                alias: 'bar',
                                 from: [{
                                     type: 'string',
                                     value: 'foo'
@@ -541,9 +643,10 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: 'rand()',
+                                alias: 'bar',
                                 from: [{
                                     name: 'rand',
                                     type: 'functionCall',
@@ -567,9 +670,10 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: 'rand()',
+                                alias: 'bar',
                                 from: [{
                                     name: 'rand',
                                     type: 'functionCall',
@@ -593,9 +697,10 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: 'rand()',
+                                alias: 'bar',
                                 from: [{
                                     name: 'rand',
                                     type: 'functionCall',
@@ -609,7 +714,7 @@ describe('lambda-parser', () => {
         });
 
         test('supports singleline anything before final return statement', () => {
-            const statement = 'jdashjdlijasldjaslkdmla';
+            const statement = 'jdashjdlijasldjaslkdmla CREATE (n {foo: 1})';
 
             expect(parseLambda(`x => { ${statement} return rand() AS bar }`)).toEqual([
                 {
@@ -621,9 +726,10 @@ describe('lambda-parser', () => {
                     },
                     body: {
                         statement,
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: 'rand()',
+                                alias: 'bar',
                                 from: [{
                                     name: 'rand',
                                     type: 'functionCall',
@@ -657,9 +763,10 @@ asdjokajsd
                     },
                     body: {
                         statement,
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: 'rand()',
+                                alias: 'bar',
                                 from: [{
                                     name: 'rand',
                                     type: 'functionCall',
@@ -688,9 +795,10 @@ asdjokajsd
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: 'rand()',
+                                alias: 'bar',
                                 from: [{
                                     type: 'functionCall',
                                     name: 'rand',
@@ -721,9 +829,10 @@ asdjokajsd
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: 'rand()',
+                                alias: 'bar',
                                 from: [{
                                     type: 'functionCall',
                                     name: 'rand',
@@ -758,9 +867,10 @@ asdjokajsd
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: 'rand()',
+                                alias: 'bar',
                                 from: [{
                                     type: 'functionCall',
                                     name: 'rand',
@@ -791,7 +901,7 @@ asdjokajsd
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
                                 name: 'rand()',
                                 from: [{
@@ -824,9 +934,10 @@ asdjokajsd
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: 'rand()',
+                                alias: 'bar',
                                 from: [{
                                     type: 'functionCall',
                                     name: 'rand',
@@ -857,7 +968,7 @@ asdjokajsd
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
                                 name: 'bar',
                                 from: [{
@@ -889,9 +1000,10 @@ asdjokajsd
                     },
                     body: {
                         statement: '',
-                        return: [
+                        returnValues: [
                             {
-                                name: 'bar',
+                                name: '"foo"',
+                                alias: 'bar',
                                 from: [{
                                     type: 'string',
                                     value: 'foo'
@@ -925,7 +1037,7 @@ asdjokajsd
                     },
                     body: {
                         statement: 'CALL db.labels() YIELD label',
-                        return: [
+                        returnValues: [
                             {
                                 name: 'COLLECT(label)[0]',
                                 from: [
@@ -971,7 +1083,7 @@ asdjokajsd
                     },
                     body: {
                         statement: 'CALL db.labels() YIELD label',
-                        return: [
+                        returnValues: [
                             {
                                 name: 'COLLECT(label)["123 hurr durr"]',
                                 from: [
@@ -1017,7 +1129,7 @@ asdjokajsd
                     },
                     body: {
                         statement: 'CALL db.labels() YIELD label',
-                        return: [
+                        returnValues: [
                             {
                                 name: 'COLLECT(label).foo',
                                 from: [
@@ -1032,6 +1144,62 @@ asdjokajsd
                                         type: 'path',
                                         variant: 'token',
                                         value: '.foo'
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ])
+        });
+
+        test('Supports returning function calls with deep object path', () => {
+            const query = `[{x}] => {
+                CALL db.labels() YIELD label
+                RETURN COLLECT(label)[0].foo["yolo"]
+            }`;
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'explicit',
+                    parameters: {
+                        type: 'array',
+                        items: [
+                            {
+                                type: 'object',
+                                keys: [
+                                    'x'
+                                ]
+                            }
+                        ]
+                    },
+                    body: {
+                        statement: 'CALL db.labels() YIELD label',
+                        returnValues: [
+                            {
+                                name: 'COLLECT(label)[0].foo["yolo"]',
+                                from: [
+                                    {
+                                        type: 'functionCall',
+                                        name: 'COLLECT',
+                                        args: [
+                                            'label'
+                                        ]
+                                    },
+                                    {
+                                        type: 'path',
+                                        variant: 'number',
+                                        value: '[0]'
+                                    },
+                                    {
+                                        type: 'path',
+                                        variant: 'token',
+                                        value: '.foo'
+                                    },
+                                    {
+                                        type: 'path',
+                                        variant: 'string',
+                                        value: '["yolo"]'
                                     }
                                 ]
                             }
@@ -1063,9 +1231,10 @@ asdjokajsd
                     },
                     body: {
                         statement: 'CALL db.labels() YIELD label',
-                        return: [
+                        returnValues: [
                             {
-                                name: 'foo',
+                                name: 'COLLECT(label)[0]',
+                                alias: 'foo',
                                 from: [
                                     {
                                         type: 'functionCall',

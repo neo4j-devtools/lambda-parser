@@ -144,29 +144,25 @@ let ParserRules = [
         },
     {"name": "lambda", "symbols": ["explicitParameters", "FAT_ARROW", "explicitReturn"], "postprocess": ([parameters,,body]) => ({type: 'lambda', variant: 'explicit', parameters, body})},
     {"name": "lambda", "symbols": ["implicitParameters", "FAT_ARROW", "implicitReturn"], "postprocess": ([parameters,,body]) => ({type: 'lambda', variant: 'implicit', parameters, body})},
-    {"name": "explicitReturn", "symbols": ["L_CURLY", "multiLine", "__", "RETURN", "returnValues", "R_CURLY"], "postprocess": ([,statement,,, value]) => ({statement, return: value})},
-    {"name": "explicitReturn", "symbols": ["L_CURLY", "singleLine", "__", "RETURN", "returnValues", "R_CURLY"], "postprocess": ([,statement,,, value]) => ({statement, return: value})},
-    {"name": "explicitReturn", "symbols": ["L_CURLY", "_", "RETURN", "returnValues", "R_CURLY"], "postprocess": ([,,, value]) => ({statement: '', return: value})},
-    {"name": "implicitReturn", "symbols": ["returnValue"], "postprocess": ([value]) => ({return: [value]})},
+    {"name": "explicitReturn", "symbols": ["L_CURLY", "multiLine", "__", "RETURN", "returnValues", "R_CURLY"], "postprocess": ([,statement,,, returnValues]) => ({statement, returnValues})},
+    {"name": "explicitReturn", "symbols": ["L_CURLY", "singleLine", "__", "RETURN", "returnValues", "R_CURLY"], "postprocess": ([,statement,,, returnValues]) => ({statement, returnValues})},
+    {"name": "explicitReturn", "symbols": ["L_CURLY", "_", "RETURN", "returnValues", "R_CURLY"], "postprocess": ([,,, returnValues]) => ({statement: '', returnValues})},
+    {"name": "implicitReturn", "symbols": ["returnValue"], "postprocess": ([returnValue]) => ({returnValues: [returnValue]})},
     {"name": "returnValues", "symbols": ["returnValue", "COMMA", "returnValues"], "postprocess": ([hit,, rest]) => [hit, ...rest]},
     {"name": "returnValues", "symbols": ["returnValue"]},
-    {"name": "returnValue", "symbols": ["functionCall", "AS", "token"], "postprocess": ([func,, name]) => ({name: name.value, from: [func]})},
-    {"name": "returnValue", "symbols": ["functionCall", "objectPath", "AS", "token"], "postprocess": ([func, path,, name]) => ({name: name.value, from: [func, path]})},
-    {"name": "returnValue", "symbols": ["token", "AS", "token"], "postprocess": ([token,, name]) => ({name: name.value, from: [token]})},
-    {"name": "returnValue", "symbols": ["token", "objectPath", "AS", "token"], "postprocess": ([token, path,, name]) => ({name: name.value, from: [token, path]})},
-    {"name": "returnValue", "symbols": ["number", "AS", "token"], "postprocess": ([num,, name]) => ({name: name.value, from: [num]})},
-    {"name": "returnValue", "symbols": ["string", "AS", "token"], "postprocess": ([str,, name]) => ({name: name.value, from: [str]})},
-    {"name": "returnValue", "symbols": ["token"], "postprocess": ([token]) => ({ name: token.value, from: [token]})},
-    {"name": "returnValue", "symbols": ["token", "objectPath"], "postprocess": ([token, path]) => ({ name: `${token.value}${path.value}`, from: [token, path]})},
-    {"name": "returnValue", "symbols": ["number"], "postprocess": ([num]) => ({ name: `${num.value}`, from: [num]})},
-    {"name": "returnValue", "symbols": ["string"], "postprocess": ([str]) => ({ name: `"${str.value}"`, from: [str]})},
-    {"name": "returnValue", "symbols": ["functionCall"], "postprocess":  ([func]) => ({
+    {"name": "returnValue", "symbols": ["return", "AS", "token"], "postprocess": ([original,, name]) => ({...original, alias: name.value})},
+    {"name": "returnValue", "symbols": ["return"], "postprocess": id},
+    {"name": "return", "symbols": ["token"], "postprocess": ([token]) => ({ name: token.value, from: [token]})},
+    {"name": "return", "symbols": ["token", "nestedObjectPath"], "postprocess": ([token, path]) => ({ name: `${token.value}${path.map(({value}) => value).join('')}`, from: [token, ...path]})},
+    {"name": "return", "symbols": ["number"], "postprocess": ([num]) => ({ name: `${num.value}`, from: [num]})},
+    {"name": "return", "symbols": ["string"], "postprocess": ([str]) => ({ name: `"${str.value}"`, from: [str]})},
+    {"name": "return", "symbols": ["functionCall"], "postprocess":  ([func]) => ({
             name: `${func.name}(${func.args.join()})`, // whitespace is lost...
             from: [func],
         }) },
-    {"name": "returnValue", "symbols": ["functionCall", "objectPath"], "postprocess":  ([func, path]) => ({
-            name: `${func.name}(${func.args.join()})${path.value}`, // whitespace is lost...
-            from: [func, path],
+    {"name": "return", "symbols": ["functionCall", "nestedObjectPath"], "postprocess":  ([func, path]) => ({
+            name: `${func.name}(${func.args.join()})${path.map(({value}) => value).join('')}`, // whitespace is lost...
+            from: [func, ...path],
         }) },
     {"name": "explicitParameters", "symbols": ["array"], "postprocess": id},
     {"name": "explicitParameters", "symbols": ["token"], "postprocess": id},
@@ -176,6 +172,8 @@ let ParserRules = [
     {"name": "items", "symbols": ["item"], "postprocess": ([hit]) => [hit]},
     {"name": "item", "symbols": ["object"], "postprocess": id},
     {"name": "item", "symbols": ["token"], "postprocess": id},
+    {"name": "nestedObjectPath", "symbols": ["objectPath", "nestedObjectPath"], "postprocess": ([path, rest]) => [path, ...rest]},
+    {"name": "nestedObjectPath", "symbols": ["objectPath"]},
     {"name": "objectPath", "symbols": ["L_SQUARE", "number", "R_SQUARE"], "postprocess": ([, index]) => ({type: 'path', variant: index.type, value: `[${index.value}]`})},
     {"name": "objectPath", "symbols": ["L_SQUARE", "string", "R_SQUARE"], "postprocess": ([, key]) => ({type: 'path', variant: key.type, value: `["${key.value}"]`})},
     {"name": "objectPath", "symbols": ["DOT", "token"], "postprocess": ([, key]) => ({type: 'path', variant: key.type, value: `.${key.value}`})},
@@ -218,7 +216,7 @@ let ParserRules = [
     {"name": "RETURN$subexpression$1", "symbols": [/[rR]/, /[eE]/, /[tT]/, /[uU]/, /[rR]/, /[nN]/], "postprocess": function(d) {return d.join(""); }},
     {"name": "RETURN", "symbols": ["RETURN$subexpression$1", "__"], "postprocess": () => ['RETURN']},
     {"name": "AS$subexpression$1", "symbols": [/[aA]/, /[sS]/], "postprocess": function(d) {return d.join(""); }},
-    {"name": "AS", "symbols": ["_", "AS$subexpression$1"], "postprocess": () => ['AS']}
+    {"name": "AS", "symbols": ["__", "AS$subexpression$1"], "postprocess": () => ['AS']}
 ];
 let ParserStart = "lambda";
 export default { Lexer, ParserRules, ParserStart };
