@@ -6,39 +6,40 @@
 
 
 # [foo, {bar}] => { RETURN ... }
-# [foo, {bar}] => ...
+# foo => ...
 lambda -> explicitParameters FAT_ARROW explicitReturn {% ([parameters,,body]) => ({type: 'lambda', variant: 'explicit', parameters, body}) %}
     | implicitParameters FAT_ARROW implicitReturn {% ([parameters,,body]) => ({type: 'lambda', variant: 'implicit', parameters, body}) %}
 
 # { RETURN ... }
-explicitReturn -> L_CURLY multiLine __ RETURN returnValues R_CURLY {% ([,statement,,, returnValues]) => ({statement, returnValues}) %}
+explicitReturn -> L_CURLY singleLine multiLine __ RETURN returnValues R_CURLY {% ([,statement1, statement2,,, returnValues]) => ({statement: [statement1, statement2].join('\n').trim(), returnValues}) %}
+    | L_CURLY multiLine __ RETURN returnValues R_CURLY {% ([,statement,,, returnValues]) => ({statement, returnValues}) %}
     | L_CURLY singleLine __ RETURN returnValues R_CURLY {% ([,statement,,, returnValues]) => ({statement, returnValues}) %}
     | L_CURLY _ RETURN returnValues R_CURLY {% ([,,, returnValues]) => ({statement: '', returnValues}) %}
 
-# [foo, {bar}] => ...
+# ...
 implicitReturn -> returnValue {% ([returnValue]) => ({returnValues: [returnValue]}) %}
 
 # RETURN hi AS foo, rand() AS bar
 returnValues -> returnValue COMMA returnValues {% ([hit,, rest]) => [hit, ...rest] %}
     | returnValue
 
-# RETURN hi AS foo
 # RETURN rand() AS bar
-returnValue -> return AS token {% ([original,, name]) => ({...original, alias: name.value}) %}
-    | return {% id %}
+# RETURN hi
+returnValue -> value AS token {% ([original,, name]) => ({...original, alias: name.value}) %}
+    | value {% id %}
 
-# RETURN hi AS foo
-# RETURN rand() AS bar
-return -> token {% ([token]) => ({ name: token.value, from: [token]}) %}
-    | token nestedObjectPath {% ([token, path]) => ({ name: `${token.value}${path.map(({value}) => value).join('')}`, from: [token, ...path]}) %}
-    | number {% ([num]) => ({ name: `${num.value}`, from: [num]}) %}
-    | string {% ([str]) => ({ name: `"${str.value}"`, from: [str]}) %}
+# RETURN hi
+# RETURN rand()
+value -> token {% ([token]) => ({ value: token.value, from: [token]}) %}
+    | token nestedObjectPath {% ([token, path]) => ({ value: `${token.value}${path.map(({value}) => value).join('')}`, from: [token, ...path]}) %}
+    | number {% ([num]) => ({ value: `${num.value}`, from: [num]}) %}
+    | string {% ([str]) => ({ value: `"${str.value}"`, from: [str]}) %}
     | functionCall {% ([func]) => ({
-        name: `${func.name}(${func.args.join()})`, // whitespace is lost...
+        value: func.value,
         from: [func],
     }) %}
     | functionCall nestedObjectPath {% ([func, path]) => ({
-        name: `${func.name}(${func.args.join()})${path.map(({value}) => value).join('')}`, // whitespace is lost...
+        value: `${func.value}${path.map(({value}) => value).join('')}`,
         from: [func, ...path],
     }) %}
 
@@ -77,21 +78,22 @@ objectPath -> L_SQUARE number R_SQUARE {% ([, index]) => ({type: 'path', variant
 object -> L_CURLY objectKeys R_CURLY {% ([, keys]) => ({type: 'object', keys}) %}
 
 # foo, bar, baz
-objectKeys -> objectKey COMMA objectKeys {% ([objectKey,, rest]) => [objectKey.value, ...rest] %}
-   | objectKey {%([key]) => [key.value]%}
+objectKeys -> objectKey COMMA objectKeys {% ([objectKey,, rest]) => [objectKey, ...rest] %}
+   | objectKey {%([key]) => [key]%}
 
-objectKey ->  functionCall _ COLON _ token {% nth(4) %}
-    | token _ COLON _ token {% nth(4) %}
+objectKey ->  functionCall COLON token {% ([func,, alias]) => ({...func, alias: alias.value}) %}
+    | token COLON token {% ([token,, alias]) => ({...token, alias: alias.value}) %}
     | functionCall {% id %}
     | token {% id %}
 
 # rand()
-functionCall -> token L_PAREN tokens R_PAREN {% ([name,, args]) => ({type: 'functionCall', name: name.value, args}) %}
-    | token L_PAREN R_PAREN {% ([name]) => ({type: 'functionCall', name: name.value, args: []}) %}
+# whitespace is intentionally omitted
+functionCall -> token L_PAREN functionArgs R_PAREN {% ([name,, args]) => ({type: 'functionCall', name: name.value, value: `${name.value}(${args.map(({value}) => value).join()})`, args}) %}
+    | token L_PAREN R_PAREN {% ([name]) => ({type: 'functionCall', name: name.value, value: `${name.value}()`, args: []}) %}
 
 # foo, bar, baz
-tokens -> token COMMA tokens {% ([token,, rest]) => [token.value, ...rest] %}
-    | token {% ([token]) => [token.value] %}
+functionArgs -> token COMMA functionArgs {% ([token,, rest]) => [token, ...rest] %}
+    | token {% ([token]) => [token] %}
 
 string -> _ dqstring {% ([, value]) => ({type: 'string', value}) %}
 
@@ -102,11 +104,12 @@ token -> _ chars {% ([, value]) => ({type: 'token', value}) %}
 chars -> [a-zA-Z] [a-zA-Z0-9]:* {% ([value, rest]) => `${value}${rest.join('')}` %}
 
 multiLine -> newLine singleLine multiLine {% ([, hit, rest], _ , reject) => rest ? [hit, rest].join('\n').trim() : reject %}
+    | newLine multiLine {% ([hit, rest]) => [hit, rest].join('\n').trim() %} # щ（ﾟДﾟщ）
     | newLine {% id %}
 
 singleLine -> [^\n]:+ {% ([hit], _, reject) => hit.join('').trim() %}
 
-newLine -> [\n]:+ {% () => [] %}
+newLine -> [\n] {% () => [] %}
 
 DOT -> _ "." {% () => ['DOT'] %}
 COMMA -> _ "," {% () => ['COMMA'] %}
