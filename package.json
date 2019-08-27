@@ -11,8 +11,11 @@
     "debug": "npm run build && npm run parse",
     "railroad": "npx nearley-railroad src/grammar.ne -o railroad.html"
   },
-  "author": "huboneo",
-  "license": "MIT",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neo4j-apps/lambda-parser"
+  },
   "devDependencies": {
     "@babel/core": "7.5.5",
     "@babel/preset-env": "7.5.5",
