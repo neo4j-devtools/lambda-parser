@@ -1,6 +1,6 @@
 {
   "name": "@neo4j/browser-lambda-parser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "module": "src/index.js",
   "type": "module",
