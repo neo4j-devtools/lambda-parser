@@ -95,7 +95,7 @@ functionCall -> token L_PAREN functionArgs R_PAREN {% ([name,, args]) => ({type:
 functionArgs -> token COMMA functionArgs {% ([token,, rest]) => [token, ...rest] %}
     | token {% ([token]) => [token] %}
 
-# math equations
+# math equations, credit https://medium.com/@gajus/parsing-absolutely-anything-in-javascript-using-earley-algorithm-886edcc31e5e
 equation -> addsub {% id %}
 
 # Parentheses
