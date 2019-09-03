@@ -3,8 +3,8 @@
 
 @include "./constants.ne"
 @include "./primitives.ne"
-@include "./functions.ne"
 @include "./math.ne"
+@include "./operators.ne"
 
 # [foo, {bar}] => { RETURN ... }
 # foo => ...
@@ -26,23 +26,36 @@ returnValues -> returnValue COMMA returnValues {% ([hit,, rest]) => [hit, ...res
 
 # RETURN rand() AS bar
 # RETURN hi
-returnValue -> value AS token {% ([original,, name]) => ({...original, alias: name.value}) %}
-    | value {% id %}
+returnValue -> complexValue AS token {% ([original,, name]) => ({...original, alias: name.value}) %}
+    | complexValue {% id %}
+
+complexValue -> 
+    value operator complexValue {% ([value, op, ...rest]) => ({
+        value: `${getDisplayValue(value)} ${op.value} ${rest.map(({value}) => value).join('')}`,
+        type: 'complex',
+        from: [value, op, ...rest]
+    }) %}
+    | value nestedObjectPath operator complexValue {% ([value, path, op, ...rest]) => ({ 
+        value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')} ${op.value} ${rest.map(({value}) => value).join('')}`,
+        type: 'complex',
+        from: [value, op, ...path, ...rest]
+    }) %}
+    | value nestedObjectPath {% ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, from: [value, ...path]}) %}
+    | value {% ([value]) => ({value: getDisplayValue(value), from: [value]}) %}
+
+# Temporary stopgap until we can figure out a better strategy for strings
+@{%
+function getDisplayValue(token) {
+    return token.type === 'string' ? `"${token.value}"` : `${token.value}`
+}
+%}
 
 # RETURN hi
 # RETURN rand()
-value -> token {% ([token]) => ({ value: token.value, from: [token]}) %}
-    | token nestedObjectPath {% ([token, path]) => ({ value: `${token.value}${path.map(({value}) => value).join('')}`, from: [token, ...path]}) %}
-    | equation {% ([eq]) => ({ value: `${eq.value}`, from: [eq]}) %}
-    | string {% ([str]) => ({ value: `"${str.value}"`, from: [str]}) %}
-    | functionCall {% ([func]) => ({
-        value: func.value,
-        from: [func],
-    }) %}
-    | functionCall nestedObjectPath {% ([func, path]) => ({
-        value: `${func.value}${path.map(({value}) => value).join('')}`,
-        from: [func, ...path],
-    }) %}
+value -> token {% id %}
+    | equation {% id %}
+    | string {% id %}
+    | functionCall {% id %}
 
 # [x]
 # x
@@ -93,5 +106,6 @@ functionCall -> token L_PAREN functionArgs R_PAREN {% ([name,, args]) => ({type:
     | token L_PAREN R_PAREN {% ([name]) => ({type: 'functionCall', name: name.value, value: `${name.value}()`, args: []}) %}
 
 # foo, bar, baz
+# @todo: add numericals and equations
 functionArgs -> token COMMA functionArgs {% ([token,, rest]) => [token, ...rest] %}
     | token {% ([token]) => [token] %}

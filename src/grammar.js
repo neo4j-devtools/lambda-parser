@@ -27,20 +27,48 @@ function $(o) {
 function getCalcValue (left, op, right) {
 	switch(`${op}`) {
 		case 'POW':
-			return left.value ^ right.value
+			return `${left.value} ^ ${right.value}`
 		case 'PLUS':
-			return left.value + right.value
+			return `${left.value} + ${right.value}`
 		case 'MINUS':
-			return left.value - right.value
+			return `${left.value} - ${right.value}`
 		case 'TIMES':
-			return left.value * right.value
+			return `${left.value} * ${right.value}`
 		case 'DIVISION':
-			return left.value / right.value
+			return `${left.value} / ${right.value}`
 		case 'MODULO':
-			return left.value % right.value
+			return `${left.value} % ${right.value}`
 		default:
 			throw new Error(`${op} not yet supported`)
 	}
+}
+
+
+function getCalcResult (left, op, right) {
+    const leftResult = left.result || left.value
+    const rightResult = right.result || right.value
+
+	switch(`${op}`) {
+		case 'POW':
+			return Math.pow(leftResult, rightResult)
+		case 'PLUS':
+			return leftResult + rightResult
+		case 'MINUS':
+			return leftResult - rightResult
+		case 'TIMES':
+			return leftResult * rightResult
+		case 'DIVISION':
+			return leftResult / rightResult
+		case 'MODULO':
+			return leftResult % rightResult
+		default:
+			throw new Error(`${op} not yet supported`)
+	}
+}
+
+
+function getDisplayValue(token) {
+    return token.type === 'string' ? `"${token.value}"` : `${token.value}`
 }
 let Lexer = undefined;
 let ParserRules = [
@@ -51,7 +79,6 @@ let ParserRules = [
     {"name": "__$ebnf$1", "symbols": ["__$ebnf$1", "wschar"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "__", "symbols": ["__$ebnf$1"], "postprocess": function(d) {return null;}},
     {"name": "wschar", "symbols": [/[ \t\n\v\f]/], "postprocess": id},
-    {"name": "DOT", "symbols": ["_", {"literal":"."}], "postprocess": () => ['DOT']},
     {"name": "COMMA", "symbols": ["_", {"literal":","}], "postprocess": () => ['COMMA']},
     {"name": "COLON", "symbols": ["_", {"literal":":"}], "postprocess": () => ['COLON']},
     {"name": "L_SQUARE", "symbols": ["_", {"literal":"["}], "postprocess": () => ['L_SQUARE']},
@@ -66,12 +93,49 @@ let ParserRules = [
     {"name": "RETURN", "symbols": ["RETURN$subexpression$1", "__"], "postprocess": () => ['RETURN']},
     {"name": "AS$subexpression$1", "symbols": [/[aA]/, /[sS]/], "postprocess": function(d) {return d.join(""); }},
     {"name": "AS", "symbols": ["__", "AS$subexpression$1"], "postprocess": () => ['AS']},
+    {"name": "TILDE", "symbols": ["__", {"literal":"~"}], "postprocess": () => ['TILDE']},
+    {"name": "DOT", "symbols": ["_", {"literal":"."}], "postprocess": () => ['DOT']},
     {"name": "PLUS", "symbols": ["_", {"literal":"+"}], "postprocess": () => ['PLUS']},
     {"name": "MINUS", "symbols": ["_", {"literal":"-"}], "postprocess": () => ['MINUS']},
     {"name": "TIMES", "symbols": ["_", {"literal":"*"}], "postprocess": () => ['TIMES']},
     {"name": "DIVISION", "symbols": ["_", {"literal":"/"}], "postprocess": () => ['DIVISION']},
     {"name": "MODULO", "symbols": ["_", {"literal":"%"}], "postprocess": () => ['MODULO']},
     {"name": "POW", "symbols": ["_", {"literal":"^"}], "postprocess": () => ['POW']},
+    {"name": "EQUALITY", "symbols": ["_", {"literal":"="}], "postprocess": () => ['EQUALITY']},
+    {"name": "PLUS_EQUALITY", "symbols": ["PLUS", "EQUALITY"], "postprocess": () => ['PLUS_EQUALITY']},
+    {"name": "LESS_THAN", "symbols": ["_", {"literal":"<"}], "postprocess": () => ['LESS_THAN']},
+    {"name": "LESS_THAN_OR_EQUALITY", "symbols": ["LESS_THAN", "EQUALITY"], "postprocess": () => ['LESS_THAN_OR_EQUALITY']},
+    {"name": "GREATER_THAN", "symbols": ["_", {"literal":">"}], "postprocess": () => ['GREATER_THAN']},
+    {"name": "GREATER_THAN_OR_EQUALITY", "symbols": ["GREATER_THAN", "EQUALITY"], "postprocess": () => ['GREATER_THAN_OR_EQUALITY']},
+    {"name": "INEQUALITY", "symbols": ["LESS_THAN", "GREATER_THAN"], "postprocess": () => ['INEQUALITY']},
+    {"name": "REGEX_MATCH", "symbols": ["EQUALITY", "TILDE"], "postprocess": () => ['REGEX_MATCH']},
+    {"name": "AND$subexpression$1", "symbols": [/[aA]/, /[nN]/, /[dD]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "AND", "symbols": ["__", "AND$subexpression$1", "__"], "postprocess": () => ['AND']},
+    {"name": "CONTAINS$subexpression$1", "symbols": [/[cC]/, /[oO]/, /[nN]/, /[tT]/, /[aA]/, /[iI]/, /[nN]/, /[sS]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "CONTAINS", "symbols": ["__", "CONTAINS$subexpression$1", "__"], "postprocess": () => ['CONTAINS']},
+    {"name": "DISTINCT$subexpression$1", "symbols": [/[dD]/, /[iI]/, /[sS]/, /[tT]/, /[iI]/, /[nN]/, /[cC]/, /[tT]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "DISTINCT", "symbols": ["__", "DISTINCT$subexpression$1", "__"], "postprocess": () => ['DISTINCT']},
+    {"name": "ENDS_WITH$subexpression$1", "symbols": [/[eE]/, /[nN]/, /[dD]/, /[sS]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "ENDS_WITH$subexpression$2", "symbols": [/[wW]/, /[iI]/, /[tT]/, /[hH]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "ENDS_WITH", "symbols": ["__", "ENDS_WITH$subexpression$1", "__", "ENDS_WITH$subexpression$2", "__"], "postprocess": () => ['ENDS_WITH']},
+    {"name": "IN$subexpression$1", "symbols": [/[iI]/, /[nN]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "IN", "symbols": ["__", "IN$subexpression$1", "__"], "postprocess": () => ['IN']},
+    {"name": "IS_NOT_NULL$subexpression$1", "symbols": [/[iI]/, /[sS]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "IS_NOT_NULL$subexpression$2", "symbols": [/[nN]/, /[oO]/, /[tT]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "IS_NOT_NULL$subexpression$3", "symbols": [/[nN]/, /[uU]/, /[lL]/, /[lL]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "IS_NOT_NULL", "symbols": ["__", "IS_NOT_NULL$subexpression$1", "__", "IS_NOT_NULL$subexpression$2", "__", "IS_NOT_NULL$subexpression$3", "__"], "postprocess": () => ['IS_NOT_NULL']},
+    {"name": "IS_NULL$subexpression$1", "symbols": [/[iI]/, /[sS]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "IS_NULL$subexpression$2", "symbols": [/[nN]/, /[uU]/, /[lL]/, /[lL]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "IS_NULL", "symbols": ["__", "IS_NULL$subexpression$1", "__", "IS_NULL$subexpression$2", "__"], "postprocess": () => ['IS_NULL']},
+    {"name": "NOT$subexpression$1", "symbols": [/[nN]/, /[oO]/, /[tT]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "NOT", "symbols": ["__", "NOT$subexpression$1", "__"], "postprocess": () => ['NOT']},
+    {"name": "OR$subexpression$1", "symbols": [/[oO]/, /[rR]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "OR", "symbols": ["__", "OR$subexpression$1", "__"], "postprocess": () => ['OR']},
+    {"name": "STARTS_WITH$subexpression$1", "symbols": [/[sS]/, /[tT]/, /[aA]/, /[rR]/, /[tT]/, /[sS]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "STARTS_WITH$subexpression$2", "symbols": [/[wW]/, /[iI]/, /[tT]/, /[hH]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "STARTS_WITH", "symbols": ["__", "STARTS_WITH$subexpression$1", "__", "STARTS_WITH$subexpression$2", "__"], "postprocess": () => ['STARTS_WITH']},
+    {"name": "XOR$subexpression$1", "symbols": [/[xX]/, /[oO]/, /[rR]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "XOR", "symbols": ["__", "XOR$subexpression$1", "__"], "postprocess": () => ['XOR']},
     {"name": "dqstring$ebnf$1", "symbols": []},
     {"name": "dqstring$ebnf$1", "symbols": ["dqstring$ebnf$1", "dstrchar"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "dqstring", "symbols": [{"literal":"\""}, "dqstring$ebnf$1", {"literal":"\""}], "postprocess": function(d) {return d[1].join(""); }},
@@ -196,16 +260,41 @@ let ParserRules = [
     {"name": "singleLine$ebnf$1", "symbols": ["singleLine$ebnf$1", /[^\n]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "singleLine", "symbols": ["singleLine$ebnf$1"], "postprocess": ([hit], _, reject) => hit.join('').trim()},
     {"name": "newLine", "symbols": [/[\n]/], "postprocess": () => []},
+    {"name": "operator", "symbols": ["PLUS"], "postprocess": (from) => ({type: 'operator', value: '+', from})},
+    {"name": "operator", "symbols": ["MINUS"], "postprocess": (from) => ({type: 'operator', value: '-', from})},
+    {"name": "operator", "symbols": ["TIMES"], "postprocess": (from) => ({type: 'operator', value: '*', from})},
+    {"name": "operator", "symbols": ["DIVISION"], "postprocess": (from) => ({type: 'operator', value: '/', from})},
+    {"name": "operator", "symbols": ["MODULO"], "postprocess": (from) => ({type: 'operator', value: '%', from})},
+    {"name": "operator", "symbols": ["POW"], "postprocess": (from) => ({type: 'operator', value: '^', from})},
+    {"name": "operator", "symbols": ["EQUALITY"], "postprocess": (from) => ({type: 'operator', value: '=', from})},
+    {"name": "operator", "symbols": ["PLUS_EQUALITY"], "postprocess": (from) => ({type: 'operator', value: '+=', from})},
+    {"name": "operator", "symbols": ["LESS_THAN"], "postprocess": (from) => ({type: 'operator', value: '<', from})},
+    {"name": "operator", "symbols": ["LESS_THAN_OR_EQUALITY"], "postprocess": (from) => ({type: 'operator', value: '<=', from})},
+    {"name": "operator", "symbols": ["GREATER_THAN"], "postprocess": (from) => ({type: 'operator', value: '>', from})},
+    {"name": "operator", "symbols": ["GREATER_THAN_OR_EQUALITY"], "postprocess": (from) => ({type: 'operator', value: '>=', from})},
+    {"name": "operator", "symbols": ["INEQUALITY"], "postprocess": (from) => ({type: 'operator', value: '<>', from})},
+    {"name": "operator", "symbols": ["REGEX_MATCH"], "postprocess": (from) => ({type: 'operator', value: '=~', from})},
+    {"name": "operator", "symbols": ["AND"], "postprocess": (from) => ({type: 'operator', value: 'AND', from})},
+    {"name": "operator", "symbols": ["CONTAINS"], "postprocess": (from) => ({type: 'operator', value: 'CONTAINS', from})},
+    {"name": "operator", "symbols": ["DISTINCT"], "postprocess": (from) => ({type: 'operator', value: 'DISTINCT', from})},
+    {"name": "operator", "symbols": ["ENDS_WITH"], "postprocess": (from) => ({type: 'operator', value: 'ENDS WITH', from})},
+    {"name": "operator", "symbols": ["IN"], "postprocess": (from) => ({type: 'operator', value: 'IN', from})},
+    {"name": "operator", "symbols": ["IS_NOT_NULL"], "postprocess": (from) => ({type: 'operator', value: 'IS NOT NULL', from})},
+    {"name": "operator", "symbols": ["IS_NULL"], "postprocess": (from) => ({type: 'operator', value: 'IS NULL', from})},
+    {"name": "operator", "symbols": ["NOT"], "postprocess": (from) => ({type: 'operator', value: 'NOT', from})},
+    {"name": "operator", "symbols": ["OR"], "postprocess": (from) => ({type: 'operator', value: 'OR', from})},
+    {"name": "operator", "symbols": ["STARTS_WITH"], "postprocess": (from) => ({type: 'operator', value: 'STARTS WITH', from})},
+    {"name": "operator", "symbols": ["XOR"], "postprocess": (from) => ({type: 'operator', value: 'XOR', from})},
     {"name": "equation", "symbols": ["addsub"], "postprocess": id},
-    {"name": "parens", "symbols": ["L_PAREN", "addsub", "R_PAREN"], "postprocess": ([, eq]) => ({...eq, variant: 'parenthesis'})},
+    {"name": "parens", "symbols": ["L_PAREN", "addsub", "R_PAREN"], "postprocess": ([, eq]) => ({...eq, value: `(${eq.value})`, hasParenthesis: true})},
     {"name": "parens", "symbols": ["number"], "postprocess": id},
-    {"name": "muldiv", "symbols": ["muldiv", "TIMES", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'TIMES', value: getCalcValue(left, op, right), from: [left, right]})},
-    {"name": "muldiv", "symbols": ["muldiv", "DIVISION", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'DIVISION', value: getCalcValue(left, op, right), from: [left, right]})},
-    {"name": "muldiv", "symbols": ["muldiv", "MODULO", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'MODULO', value: getCalcValue(left, op, right), from: [left, right]})},
-    {"name": "muldiv", "symbols": ["muldiv", "POW", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'POW', value: getCalcValue(left, op, right), from: [left, right]})},
+    {"name": "muldiv", "symbols": ["muldiv", "TIMES", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'TIMES', value: getCalcValue(left, op, right), result: getCalcResult(left, op, right), from: [left, right]})},
+    {"name": "muldiv", "symbols": ["muldiv", "DIVISION", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'DIVISION', value: getCalcValue(left, op, right), result: getCalcResult(left, op, right), from: [left, right]})},
+    {"name": "muldiv", "symbols": ["muldiv", "MODULO", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'MODULO', value: getCalcValue(left, op, right), result: getCalcResult(left, op, right), from: [left, right]})},
+    {"name": "muldiv", "symbols": ["muldiv", "POW", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'POW', value: getCalcValue(left, op, right), result: getCalcResult(left, op, right), from: [left, right]})},
     {"name": "muldiv", "symbols": ["parens"], "postprocess": id},
-    {"name": "addsub", "symbols": ["addsub", "PLUS", "muldiv"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'PLUS', value: getCalcValue(left, op, right), from: [left, right]})},
-    {"name": "addsub", "symbols": ["addsub", "MINUS", "muldiv"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'MINUS', value: getCalcValue(left, op, right), from: [left, right]})},
+    {"name": "addsub", "symbols": ["addsub", "PLUS", "muldiv"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'PLUS', value: getCalcValue(left, op, right), result: getCalcResult(left, op, right), from: [left, right]})},
+    {"name": "addsub", "symbols": ["addsub", "MINUS", "muldiv"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'MINUS', value: getCalcValue(left, op, right), result: getCalcResult(left, op, right), from: [left, right]})},
     {"name": "addsub", "symbols": ["muldiv"], "postprocess": id},
     {"name": "lambda", "symbols": ["explicitParameters", "FAT_ARROW", "explicitReturn"], "postprocess": ([parameters,,body]) => ({type: 'lambda', variant: 'explicit', parameters, body})},
     {"name": "lambda", "symbols": ["implicitParameters", "FAT_ARROW", "implicitReturn"], "postprocess": ([parameters,,body]) => ({type: 'lambda', variant: 'implicit', parameters, body})},
@@ -216,20 +305,24 @@ let ParserRules = [
     {"name": "implicitReturn", "symbols": ["returnValue"], "postprocess": ([returnValue]) => ({returnValues: [returnValue]})},
     {"name": "returnValues", "symbols": ["returnValue", "COMMA", "returnValues"], "postprocess": ([hit,, rest]) => [hit, ...rest]},
     {"name": "returnValues", "symbols": ["returnValue"]},
-    {"name": "returnValue", "symbols": ["value", "AS", "token"], "postprocess": ([original,, name]) => ({...original, alias: name.value})},
-    {"name": "returnValue", "symbols": ["value"], "postprocess": id},
-    {"name": "value", "symbols": ["token"], "postprocess": ([token]) => ({ value: token.value, from: [token]})},
-    {"name": "value", "symbols": ["token", "nestedObjectPath"], "postprocess": ([token, path]) => ({ value: `${token.value}${path.map(({value}) => value).join('')}`, from: [token, ...path]})},
-    {"name": "value", "symbols": ["equation"], "postprocess": ([eq]) => ({ value: `${eq.value}`, from: [eq]})},
-    {"name": "value", "symbols": ["string"], "postprocess": ([str]) => ({ value: `"${str.value}"`, from: [str]})},
-    {"name": "value", "symbols": ["functionCall"], "postprocess":  ([func]) => ({
-            value: func.value,
-            from: [func],
+    {"name": "returnValue", "symbols": ["complexValue", "AS", "token"], "postprocess": ([original,, name]) => ({...original, alias: name.value})},
+    {"name": "returnValue", "symbols": ["complexValue"], "postprocess": id},
+    {"name": "complexValue", "symbols": ["value", "operator", "complexValue"], "postprocess":  ([value, op, ...rest]) => ({
+            value: `${getDisplayValue(value)} ${op.value} ${rest.map(({value}) => value).join('')}`,
+            type: 'complex',
+            from: [value, op, ...rest]
         }) },
-    {"name": "value", "symbols": ["functionCall", "nestedObjectPath"], "postprocess":  ([func, path]) => ({
-            value: `${func.value}${path.map(({value}) => value).join('')}`,
-            from: [func, ...path],
+    {"name": "complexValue", "symbols": ["value", "nestedObjectPath", "operator", "complexValue"], "postprocess":  ([value, path, op, ...rest]) => ({ 
+            value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')} ${op.value} ${rest.map(({value}) => value).join('')}`,
+            type: 'complex',
+            from: [value, op, ...path, ...rest]
         }) },
+    {"name": "complexValue", "symbols": ["value", "nestedObjectPath"], "postprocess": ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, from: [value, ...path]})},
+    {"name": "complexValue", "symbols": ["value"], "postprocess": ([value]) => ({value: getDisplayValue(value), from: [value]})},
+    {"name": "value", "symbols": ["token"], "postprocess": id},
+    {"name": "value", "symbols": ["equation"], "postprocess": id},
+    {"name": "value", "symbols": ["string"], "postprocess": id},
+    {"name": "value", "symbols": ["functionCall"], "postprocess": id},
     {"name": "explicitParameters", "symbols": ["array"], "postprocess": id},
     {"name": "explicitParameters", "symbols": ["token"], "postprocess": id},
     {"name": "implicitParameters", "symbols": ["token"], "postprocess": id},
