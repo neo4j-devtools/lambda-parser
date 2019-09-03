@@ -8,7 +8,7 @@
   "type": "module",
   "scripts": {
     "test": "npm run build && jest",
-    "build": "nearleyc src/grammar.ne -o src/grammar.js",
+    "build": "nearleyc src/grammar/grammar.ne -o src/grammar.js",
     "parse": "node --experimental-modules --es-module-specifier-resolution=node debug.js",
     "debug": "npm run build && npm run parse",
     "railroad": "npx nearley-railroad src/grammar.ne -o railroad.html"

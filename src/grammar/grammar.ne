@@ -1,9 +1,10 @@
-@builtin "whitespace.ne"
-@builtin "string.ne"
-@builtin "number.ne"
 @builtin "postprocessors.ne"
 @preprocessor esmodule
 
+@include "./constants.ne"
+@include "./primitives.ne"
+@include "./functions.ne"
+@include "./math.ne"
 
 # [foo, {bar}] => { RETURN ... }
 # foo => ...
@@ -94,79 +95,3 @@ functionCall -> token L_PAREN functionArgs R_PAREN {% ([name,, args]) => ({type:
 # foo, bar, baz
 functionArgs -> token COMMA functionArgs {% ([token,, rest]) => [token, ...rest] %}
     | token {% ([token]) => [token] %}
-
-# math equations, credit https://medium.com/@gajus/parsing-absolutely-anything-in-javascript-using-earley-algorithm-886edcc31e5e
-equation -> addsub {% id %}
-
-# Parentheses
-parens -> L_PAREN addsub R_PAREN {% ([, eq]) => ({...eq, variant: 'parenthesis'}) %}
-    | number {% id %}
-	
-# Multiplication and division
-muldiv -> muldiv TIMES parens {% ([left,op,right]) => ({type: 'equation', variant: 'TIMES', value: getCalcValue(left, op, right), from: [left, right]}) %}
-    | muldiv DIVISION parens {% ([left,op,right]) => ({type: 'equation', variant: 'DIVISION', value: getCalcValue(left, op, right), from: [left, right]}) %}
-    | muldiv MODULO parens {% ([left,op,right]) => ({type: 'equation', variant: 'MODULO', value: getCalcValue(left, op, right), from: [left, right]}) %}
-    | muldiv POW parens {% ([left,op,right]) => ({type: 'equation', variant: 'POW', value: getCalcValue(left, op, right), from: [left, right]}) %}
-    | parens {% id %}
-	
-# Addition and subtraction
-addsub ->
-    addsub PLUS muldiv {% ([left,op,right]) => ({type: 'equation', variant: 'PLUS', value: getCalcValue(left, op, right), from: [left, right]}) %}
-  | addsub MINUS muldiv {% ([left,op,right]) => ({type: 'equation', variant: 'MINUS', value: getCalcValue(left, op, right), from: [left, right]}) %}
-  | muldiv {% id %}
-
-string -> _ dqstring {% ([, value]) => ({type: 'string', value}) %}
-
-number -> _ decimal {% ([, value]) => ({type: 'number', value}) %}
-
-token -> _ chars {% ([, value]) => ({type: 'token', value}) %}
-
-chars -> [a-zA-Z] [a-zA-Z0-9]:* {% ([value, rest]) => `${value}${rest.join('')}` %}
-
-multiLine -> newLine singleLine multiLine {% ([, hit, rest], _ , reject) => rest ? [hit, rest].join('\n').trim() : reject %}
-    | newLine multiLine {% ([hit, rest]) => [hit, rest].join('\n').trim() %} # щ（ﾟДﾟщ）
-    | newLine {% id %}
-
-singleLine -> [^\n]:+ {% ([hit], _, reject) => hit.join('').trim() %}
-
-newLine -> [\n] {% () => [] %}
-
-DOT -> _ "." {% () => ['DOT'] %}
-COMMA -> _ "," {% () => ['COMMA'] %}
-COLON -> _ ":" {% () => ['COLON'] %}
-L_SQUARE -> _ "[" {% () => ['L_SQUARE'] %}
-R_SQUARE -> _ "]" {% () => ['R_SQUARE'] %}
-L_CURLY -> _ "{" {% () => ['L_CURLY'] %}
-R_CURLY -> _ "}" {% () => ['R_CURLY'] %}
-L_PAREN -> _ "(" {% () => ['L_PAREN'] %}
-R_PAREN -> _ ")" {% () => ['R_PAREN'] %}
-FAT_ARROW -> _ "=>" {% () => ['F_ARROW'] %}
-RETURN -> "RETURN"i __ {% () => ['RETURN'] %}
-AS -> __ "AS"i {% () => ['AS'] %}
-PLUS -> _ "+" {% () => ['PLUS'] %}
-MINUS -> _ "-" {% () => ['MINUS'] %}
-TIMES -> _ "*" {% () => ['TIMES'] %}
-DIVISION -> _ "/" {% () => ['DIVISION'] %}
-MODULO -> _ "%" {% () => ['MODULO'] %}
-POW -> _ "^" {% () => ['POW'] %}
-
-@{%
-function getCalcValue (left, op, right) {
-	switch(`${op}`) {
-		case 'POW':
-			return left.value ^ right.value
-		case 'PLUS':
-			return left.value + right.value
-		case 'MINUS':
-			return left.value - right.value
-		case 'TIMES':
-			return left.value * right.value
-		case 'DIVISION':
-			return left.value / right.value
-		case 'MODULO':
-			return left.value % right.value
-		default:
-			throw new Error(`${op} not yet supported`)
-	}
-}
-%}
