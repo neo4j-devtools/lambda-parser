@@ -11,7 +11,7 @@
     "build": "nearleyc src/grammar/grammar.ne -o src/grammar.js",
     "parse": "node --experimental-modules --es-module-specifier-resolution=node debug.js",
     "debug": "npm run build && npm run parse",
-    "railroad": "npx nearley-railroad src/grammar.ne -o railroad.html"
+    "railroad": "nearley-railroad src/grammar/grammar.ne -o railroad.html"
   },
   "license": "Apache-2.0",
   "repository": {

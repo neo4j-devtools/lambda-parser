@@ -1,5 +1,6 @@
 @include "./constants.ne"
 @include "./primitives.ne"
+@include "./functions.ne"
 
 # math equations, credit https://medium.com/@gajus/parsing-absolutely-anything-in-javascript-using-earley-algorithm-886edcc31e5e
 equation -> addsub {% id %}
@@ -16,8 +17,6 @@ muldiv -> muldiv TIMES parens {% ([left,op,right]) => ({type: 'equation', varian
     | parens {% id %}
 	
 # Addition and subtraction
-addsub ->
-    addsub PLUS muldiv {% ([left,op,right]) => ({type: 'equation', variant: 'PLUS', value: getCalcValue(left, op, right), from: [left, right]}) %}
+addsub -> addsub PLUS muldiv {% ([left,op,right]) => ({type: 'equation', variant: 'PLUS', value: getCalcValue(left, op, right), from: [left, right]}) %}
   | addsub MINUS muldiv {% ([left,op,right]) => ({type: 'equation', variant: 'MINUS', value: getCalcValue(left, op, right), from: [left, right]}) %}
   | muldiv {% id %}
-
