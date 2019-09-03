@@ -22,6 +22,26 @@ function $(o) {
         return ret;
     };
 }
+
+
+function getCalcValue (left, op, right) {
+	switch(`${op}`) {
+		case 'POW':
+			return left.value ^ right.value
+		case 'PLUS':
+			return left.value + right.value
+		case 'MINUS':
+			return left.value - right.value
+		case 'TIMES':
+			return left.value * right.value
+		case 'DIVISION':
+			return left.value / right.value
+		case 'MODULO':
+			return left.value % right.value
+		default:
+			throw new Error(`${op} not yet supported`)
+	}
+}
 let Lexer = undefined;
 let ParserRules = [
     {"name": "_$ebnf$1", "symbols": []},
@@ -155,7 +175,7 @@ let ParserRules = [
     {"name": "returnValue", "symbols": ["value"], "postprocess": id},
     {"name": "value", "symbols": ["token"], "postprocess": ([token]) => ({ value: token.value, from: [token]})},
     {"name": "value", "symbols": ["token", "nestedObjectPath"], "postprocess": ([token, path]) => ({ value: `${token.value}${path.map(({value}) => value).join('')}`, from: [token, ...path]})},
-    {"name": "value", "symbols": ["number"], "postprocess": ([num]) => ({ value: `${num.value}`, from: [num]})},
+    {"name": "value", "symbols": ["equation"], "postprocess": ([eq]) => ({ value: `${eq.value}`, from: [eq]})},
     {"name": "value", "symbols": ["string"], "postprocess": ([str]) => ({ value: `"${str.value}"`, from: [str]})},
     {"name": "value", "symbols": ["functionCall"], "postprocess":  ([func]) => ({
             value: func.value,
@@ -189,6 +209,17 @@ let ParserRules = [
     {"name": "functionCall", "symbols": ["token", "L_PAREN", "R_PAREN"], "postprocess": ([name]) => ({type: 'functionCall', name: name.value, value: `${name.value}()`, args: []})},
     {"name": "functionArgs", "symbols": ["token", "COMMA", "functionArgs"], "postprocess": ([token,, rest]) => [token, ...rest]},
     {"name": "functionArgs", "symbols": ["token"], "postprocess": ([token]) => [token]},
+    {"name": "equation", "symbols": ["addsub"], "postprocess": id},
+    {"name": "parens", "symbols": ["L_PAREN", "addsub", "R_PAREN"], "postprocess": ([, eq]) => ({...eq, variant: 'parenthesis'})},
+    {"name": "parens", "symbols": ["number"], "postprocess": id},
+    {"name": "muldiv", "symbols": ["muldiv", "TIMES", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'TIMES', value: getCalcValue(left, op, right), from: [left, right]})},
+    {"name": "muldiv", "symbols": ["muldiv", "DIVISION", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'DIVISION', value: getCalcValue(left, op, right), from: [left, right]})},
+    {"name": "muldiv", "symbols": ["muldiv", "MODULO", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'MODULO', value: getCalcValue(left, op, right), from: [left, right]})},
+    {"name": "muldiv", "symbols": ["muldiv", "POW", "parens"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'POW', value: getCalcValue(left, op, right), from: [left, right]})},
+    {"name": "muldiv", "symbols": ["parens"], "postprocess": id},
+    {"name": "addsub", "symbols": ["addsub", "PLUS", "muldiv"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'PLUS', value: getCalcValue(left, op, right), from: [left, right]})},
+    {"name": "addsub", "symbols": ["addsub", "MINUS", "muldiv"], "postprocess": ([left,op,right]) => ({type: 'equation', variant: 'MINUS', value: getCalcValue(left, op, right), from: [left, right]})},
+    {"name": "addsub", "symbols": ["muldiv"], "postprocess": id},
     {"name": "string", "symbols": ["_", "dqstring"], "postprocess": ([, value]) => ({type: 'string', value})},
     {"name": "number", "symbols": ["_", "decimal"], "postprocess": ([, value]) => ({type: 'number', value})},
     {"name": "token", "symbols": ["_", "chars"], "postprocess": ([, value]) => ({type: 'token', value})},
@@ -216,7 +247,13 @@ let ParserRules = [
     {"name": "RETURN$subexpression$1", "symbols": [/[rR]/, /[eE]/, /[tT]/, /[uU]/, /[rR]/, /[nN]/], "postprocess": function(d) {return d.join(""); }},
     {"name": "RETURN", "symbols": ["RETURN$subexpression$1", "__"], "postprocess": () => ['RETURN']},
     {"name": "AS$subexpression$1", "symbols": [/[aA]/, /[sS]/], "postprocess": function(d) {return d.join(""); }},
-    {"name": "AS", "symbols": ["__", "AS$subexpression$1"], "postprocess": () => ['AS']}
+    {"name": "AS", "symbols": ["__", "AS$subexpression$1"], "postprocess": () => ['AS']},
+    {"name": "PLUS", "symbols": ["_", {"literal":"+"}], "postprocess": () => ['PLUS']},
+    {"name": "MINUS", "symbols": ["_", {"literal":"-"}], "postprocess": () => ['MINUS']},
+    {"name": "TIMES", "symbols": ["_", {"literal":"*"}], "postprocess": () => ['TIMES']},
+    {"name": "DIVISION", "symbols": ["_", {"literal":"/"}], "postprocess": () => ['DIVISION']},
+    {"name": "MODULO", "symbols": ["_", {"literal":"%"}], "postprocess": () => ['MODULO']},
+    {"name": "POW", "symbols": ["_", {"literal":"^"}], "postprocess": () => ['POW']}
 ];
 let ParserStart = "lambda";
 export default { Lexer, ParserRules, ParserStart };

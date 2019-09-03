@@ -1,4 +1,4 @@
-import parseLambda from './parse-lambda';
+import {parseLambda} from './src'
 
 const something = `[{x}] => { CALL db.labels() YIELD label
 
@@ -7,7 +7,7 @@ const something = `[{x}] => { CALL db.labels() YIELD label
 
 foo
 
-RETURN 1
+RETURN 1^3
 }`;
 const result1 = parseLambda(something)
 const result2 = parseLambda('x => {asdsd RETURN rand() }')

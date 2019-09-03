@@ -32,7 +32,7 @@ returnValue -> value AS token {% ([original,, name]) => ({...original, alias: na
 # RETURN rand()
 value -> token {% ([token]) => ({ value: token.value, from: [token]}) %}
     | token nestedObjectPath {% ([token, path]) => ({ value: `${token.value}${path.map(({value}) => value).join('')}`, from: [token, ...path]}) %}
-    | number {% ([num]) => ({ value: `${num.value}`, from: [num]}) %}
+    | equation {% ([eq]) => ({ value: `${eq.value}`, from: [eq]}) %}
     | string {% ([str]) => ({ value: `"${str.value}"`, from: [str]}) %}
     | functionCall {% ([func]) => ({
         value: func.value,
@@ -95,6 +95,26 @@ functionCall -> token L_PAREN functionArgs R_PAREN {% ([name,, args]) => ({type:
 functionArgs -> token COMMA functionArgs {% ([token,, rest]) => [token, ...rest] %}
     | token {% ([token]) => [token] %}
 
+# math equations
+equation -> addsub {% id %}
+
+# Parentheses
+parens -> L_PAREN addsub R_PAREN {% ([, eq]) => ({...eq, variant: 'parenthesis'}) %}
+    | number {% id %}
+	
+# Multiplication and division
+muldiv -> muldiv TIMES parens {% ([left,op,right]) => ({type: 'equation', variant: 'TIMES', value: getCalcValue(left, op, right), from: [left, right]}) %}
+    | muldiv DIVISION parens {% ([left,op,right]) => ({type: 'equation', variant: 'DIVISION', value: getCalcValue(left, op, right), from: [left, right]}) %}
+    | muldiv MODULO parens {% ([left,op,right]) => ({type: 'equation', variant: 'MODULO', value: getCalcValue(left, op, right), from: [left, right]}) %}
+    | muldiv POW parens {% ([left,op,right]) => ({type: 'equation', variant: 'POW', value: getCalcValue(left, op, right), from: [left, right]}) %}
+    | parens {% id %}
+	
+# Addition and subtraction
+addsub ->
+    addsub PLUS muldiv {% ([left,op,right]) => ({type: 'equation', variant: 'PLUS', value: getCalcValue(left, op, right), from: [left, right]}) %}
+  | addsub MINUS muldiv {% ([left,op,right]) => ({type: 'equation', variant: 'MINUS', value: getCalcValue(left, op, right), from: [left, right]}) %}
+  | muldiv {% id %}
+
 string -> _ dqstring {% ([, value]) => ({type: 'string', value}) %}
 
 number -> _ decimal {% ([, value]) => ({type: 'number', value}) %}
@@ -123,3 +143,30 @@ R_PAREN -> _ ")" {% () => ['R_PAREN'] %}
 FAT_ARROW -> _ "=>" {% () => ['F_ARROW'] %}
 RETURN -> "RETURN"i __ {% () => ['RETURN'] %}
 AS -> __ "AS"i {% () => ['AS'] %}
+PLUS -> _ "+" {% () => ['PLUS'] %}
+MINUS -> _ "-" {% () => ['MINUS'] %}
+TIMES -> _ "*" {% () => ['TIMES'] %}
+DIVISION -> _ "/" {% () => ['DIVISION'] %}
+MODULO -> _ "%" {% () => ['MODULO'] %}
+POW -> _ "^" {% () => ['POW'] %}
+
+@{%
+function getCalcValue (left, op, right) {
+	switch(`${op}`) {
+		case 'POW':
+			return left.value ^ right.value
+		case 'PLUS':
+			return left.value + right.value
+		case 'MINUS':
+			return left.value - right.value
+		case 'TIMES':
+			return left.value * right.value
+		case 'DIVISION':
+			return left.value / right.value
+		case 'MODULO':
+			return left.value % right.value
+		default:
+			throw new Error(`${op} not yet supported`)
+	}
+}
+%}
