@@ -30,7 +30,7 @@ returnValue -> complexValue AS token {% ([original,, name]) => ({...original, al
     | complexValue {% id %}
 
 complexValue -> 
-    value operator complexValue {% ([value, op, ...rest]) => ({
+    value operator complexValueNoEq {% ([value, op, ...rest]) => ({
         value: `${getDisplayValue(value)} ${op.value} ${rest.map(({value}) => value).join('')}`,
         type: 'complex',
         from: [value, op, ...rest]
@@ -43,12 +43,33 @@ complexValue ->
     | value nestedObjectPath {% ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [value, ...path]}) %}
     | value {% ([value]) => ({value: getDisplayValue(value), type: value.type, from: [value]}) %}
 
+# ugly but efficient. Lets revisit when we have real cypher parser
+complexValueNoEq -> 
+    valueNoEq operator complexValue {% ([value, op, ...rest]) => ({
+        value: `${getDisplayValue(value)} ${op.value} ${rest.map(({value}) => value).join('')}`,
+        type: 'complex',
+        from: [value, op, ...rest]
+    }) %}
+    | valueNoEq nestedObjectPath operator complexValue {% ([value, path, op, ...rest]) => ({ 
+        value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')} ${op.value} ${rest.map(({value}) => value).join('')}`,
+        type: 'complex',
+        from: [value, op, ...path, ...rest]
+    }) %}
+    | valueNoEq nestedObjectPath {% ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [value, ...path]}) %}
+    | valueNoEq {% ([value]) => ({value: getDisplayValue(value), type: value.type, from: [value]}) %}
+
 # Temporary stopgap until we can figure out a better strategy for strings
+# Lets revisit when we have real cypher parser
 @{%
 function getDisplayValue(token) {
     return token.type === 'string' ? `"${token.value}"` : `${token.value}`
 }
 %}
+
+# ugly but efficient. Lets revisit when we have real cypher parser
+valueNoEq -> token {% id %}
+    | string {% id %}
+    | functionCall {% id %}
 
 # RETURN hi
 # RETURN rand()
@@ -108,6 +129,5 @@ functionCall -> token L_PAREN functionArgs R_PAREN {% ([name,, args]) => ({type:
 # foo, bar, baz
 # @todo: add numericals and equations
 # @todo: introduce new form of token to represent operations on strings, numbers, tokens etc
-# @todo: handle ambiguity between complexValue and equation
 functionArgs -> complexValue COMMA functionArgs {% ([value,, rest]) => [value, ...rest] %}
     | complexValue {% ([value]) => [value] %}

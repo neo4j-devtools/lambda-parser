@@ -307,7 +307,7 @@ let ParserRules = [
     {"name": "returnValues", "symbols": ["returnValue"]},
     {"name": "returnValue", "symbols": ["complexValue", "AS", "token"], "postprocess": ([original,, name]) => ({...original, alias: name.value})},
     {"name": "returnValue", "symbols": ["complexValue"], "postprocess": id},
-    {"name": "complexValue", "symbols": ["value", "operator", "complexValue"], "postprocess":  ([value, op, ...rest]) => ({
+    {"name": "complexValue", "symbols": ["value", "operator", "complexValueNoEq"], "postprocess":  ([value, op, ...rest]) => ({
             value: `${getDisplayValue(value)} ${op.value} ${rest.map(({value}) => value).join('')}`,
             type: 'complex',
             from: [value, op, ...rest]
@@ -319,6 +319,21 @@ let ParserRules = [
         }) },
     {"name": "complexValue", "symbols": ["value", "nestedObjectPath"], "postprocess": ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [value, ...path]})},
     {"name": "complexValue", "symbols": ["value"], "postprocess": ([value]) => ({value: getDisplayValue(value), type: value.type, from: [value]})},
+    {"name": "complexValueNoEq", "symbols": ["valueNoEq", "operator", "complexValue"], "postprocess":  ([value, op, ...rest]) => ({
+            value: `${getDisplayValue(value)} ${op.value} ${rest.map(({value}) => value).join('')}`,
+            type: 'complex',
+            from: [value, op, ...rest]
+        }) },
+    {"name": "complexValueNoEq", "symbols": ["valueNoEq", "nestedObjectPath", "operator", "complexValue"], "postprocess":  ([value, path, op, ...rest]) => ({ 
+            value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')} ${op.value} ${rest.map(({value}) => value).join('')}`,
+            type: 'complex',
+            from: [value, op, ...path, ...rest]
+        }) },
+    {"name": "complexValueNoEq", "symbols": ["valueNoEq", "nestedObjectPath"], "postprocess": ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [value, ...path]})},
+    {"name": "complexValueNoEq", "symbols": ["valueNoEq"], "postprocess": ([value]) => ({value: getDisplayValue(value), type: value.type, from: [value]})},
+    {"name": "valueNoEq", "symbols": ["token"], "postprocess": id},
+    {"name": "valueNoEq", "symbols": ["string"], "postprocess": id},
+    {"name": "valueNoEq", "symbols": ["functionCall"], "postprocess": id},
     {"name": "value", "symbols": ["token"], "postprocess": id},
     {"name": "value", "symbols": ["equation"], "postprocess": id},
     {"name": "value", "symbols": ["string"], "postprocess": id},

@@ -1,13 +1,8 @@
 import {parseLambda} from './src'
 
-const something = `[{x}] => { CALL db.labels() YIELD label
-
-
-
-
-foo
-
-RETURN 1^3
+const something = `[{x}] => {
+    CALL db.labels() YIELD label
+    RETURN "foo".bar >= rand(58, abs(foo <> true), -1^3*((3-2)/1)) ENDS WITH bar <> 2
 }`;
 const result1 = parseLambda(something)
 const result2 = parseLambda('x => {asdsd RETURN rand() }')
