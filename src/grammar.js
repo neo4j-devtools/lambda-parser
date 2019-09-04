@@ -67,6 +67,10 @@ function getCalcResult (left, op, right) {
 }
 
 
+function makeDisplayValueObject(value) {
+    return ({value: getDisplayValue(value), type: value.type, from: [value]})
+}
+
 function getDisplayValue(token) {
     return token.type === 'string' ? `"${token.value}"` : `${token.value}`
 }
@@ -89,11 +93,11 @@ let ParserRules = [
     {"name": "R_PAREN", "symbols": ["_", {"literal":")"}], "postprocess": () => ['R_PAREN']},
     {"name": "FAT_ARROW$string$1", "symbols": [{"literal":"="}, {"literal":">"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "FAT_ARROW", "symbols": ["_", "FAT_ARROW$string$1"], "postprocess": () => ['F_ARROW']},
+    {"name": "TILDE", "symbols": ["_", {"literal":"~"}], "postprocess": () => ['TILDE']},
     {"name": "RETURN$subexpression$1", "symbols": [/[rR]/, /[eE]/, /[tT]/, /[uU]/, /[rR]/, /[nN]/], "postprocess": function(d) {return d.join(""); }},
     {"name": "RETURN", "symbols": ["RETURN$subexpression$1", "__"], "postprocess": () => ['RETURN']},
     {"name": "AS$subexpression$1", "symbols": [/[aA]/, /[sS]/], "postprocess": function(d) {return d.join(""); }},
     {"name": "AS", "symbols": ["__", "AS$subexpression$1"], "postprocess": () => ['AS']},
-    {"name": "TILDE", "symbols": ["__", {"literal":"~"}], "postprocess": () => ['TILDE']},
     {"name": "DOT", "symbols": ["_", {"literal":"."}], "postprocess": () => ['DOT']},
     {"name": "PLUS", "symbols": ["_", {"literal":"+"}], "postprocess": () => ['PLUS']},
     {"name": "MINUS", "symbols": ["_", {"literal":"-"}], "postprocess": () => ['MINUS']},
@@ -120,6 +124,9 @@ let ParserRules = [
     {"name": "ENDS_WITH", "symbols": ["__", "ENDS_WITH$subexpression$1", "__", "ENDS_WITH$subexpression$2", "__"], "postprocess": () => ['ENDS_WITH']},
     {"name": "IN$subexpression$1", "symbols": [/[iI]/, /[nN]/], "postprocess": function(d) {return d.join(""); }},
     {"name": "IN", "symbols": ["__", "IN$subexpression$1", "__"], "postprocess": () => ['IN']},
+    {"name": "NOT_IN$subexpression$1", "symbols": [/[nN]/, /[oO]/, /[tT]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "NOT_IN$subexpression$2", "symbols": [/[iI]/, /[nN]/], "postprocess": function(d) {return d.join(""); }},
+    {"name": "NOT_IN", "symbols": ["__", "NOT_IN$subexpression$1", "__", "NOT_IN$subexpression$2", "__"], "postprocess": () => ['NOT_IN']},
     {"name": "IS_NOT_NULL$subexpression$1", "symbols": [/[iI]/, /[sS]/], "postprocess": function(d) {return d.join(""); }},
     {"name": "IS_NOT_NULL$subexpression$2", "symbols": [/[nN]/, /[oO]/, /[tT]/], "postprocess": function(d) {return d.join(""); }},
     {"name": "IS_NOT_NULL$subexpression$3", "symbols": [/[nN]/, /[uU]/, /[lL]/, /[lL]/], "postprocess": function(d) {return d.join(""); }},
@@ -282,6 +289,7 @@ let ParserRules = [
     {"name": "operator", "symbols": ["IS_NOT_NULL"], "postprocess": (from) => ({type: 'operator', value: 'IS NOT NULL', from})},
     {"name": "operator", "symbols": ["IS_NULL"], "postprocess": (from) => ({type: 'operator', value: 'IS NULL', from})},
     {"name": "operator", "symbols": ["NOT"], "postprocess": (from) => ({type: 'operator', value: 'NOT', from})},
+    {"name": "operator", "symbols": ["NOT_IN"], "postprocess": (from) => ({type: 'operator', value: 'NOT IN', from})},
     {"name": "operator", "symbols": ["OR"], "postprocess": (from) => ({type: 'operator', value: 'OR', from})},
     {"name": "operator", "symbols": ["STARTS_WITH"], "postprocess": (from) => ({type: 'operator', value: 'STARTS WITH', from})},
     {"name": "operator", "symbols": ["XOR"], "postprocess": (from) => ({type: 'operator', value: 'XOR', from})},
@@ -307,30 +315,32 @@ let ParserRules = [
     {"name": "returnValues", "symbols": ["returnValue"]},
     {"name": "returnValue", "symbols": ["complexValue", "AS", "token"], "postprocess": ([original,, name]) => ({...original, alias: name.value})},
     {"name": "returnValue", "symbols": ["complexValue"], "postprocess": id},
-    {"name": "complexValue", "symbols": ["value", "operator", "complexValueNoEq"], "postprocess":  ([value, op, ...rest]) => ({
+    {"name": "complexValuesArray", "symbols": ["L_SQUARE", "complexValuesArrayItems", "R_SQUARE"], "postprocess":  ([, values]) => ({
+            type: 'array',
+            value: `[${values.map(({value}) => value).join(', ')}]`,
+            items: [...values]
+        })},
+    {"name": "complexValuesArrayItems", "symbols": ["complexValue", "COMMA", "complexValuesArrayItems"], "postprocess": ([value,,values]) => [value, ...values]},
+    {"name": "complexValuesArrayItems", "symbols": ["complexValue"]},
+    {"name": "complexValue", "symbols": ["value", "operator", "complexValue"], "postprocess":  ([value, op, ...rest]) => ({
             value: `${getDisplayValue(value)} ${op.value} ${rest.map(({value}) => value).join('')}`,
             type: 'complex',
-            from: [value, op, ...rest]
+            from: [makeDisplayValueObject(value), op, ...rest]
         }) },
     {"name": "complexValue", "symbols": ["value", "nestedObjectPath", "operator", "complexValue"], "postprocess":  ([value, path, op, ...rest]) => ({ 
             value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')} ${op.value} ${rest.map(({value}) => value).join('')}`,
             type: 'complex',
-            from: [value, op, ...path, ...rest]
+            from: [makeDisplayValueObject(value), op, ...path.map(makeDisplayValueObject), ...rest]
         }) },
-    {"name": "complexValue", "symbols": ["value", "nestedObjectPath"], "postprocess": ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [value, ...path]})},
-    {"name": "complexValue", "symbols": ["value"], "postprocess": ([value]) => ({value: getDisplayValue(value), type: value.type, from: [value]})},
-    {"name": "complexValueNoEq", "symbols": ["valueNoEq", "operator", "complexValue"], "postprocess":  ([value, op, ...rest]) => ({
+    {"name": "complexValue", "symbols": ["value", "nestedObjectPath"], "postprocess": ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [makeDisplayValueObject(value), ...path.map(makeDisplayValueObject)]})},
+    {"name": "complexValue", "symbols": ["complexValuesArray"], "postprocess": id},
+    {"name": "complexValue", "symbols": ["value"], "postprocess": ([value]) => makeDisplayValueObject(value)},
+    {"name": "complexValueNoEq", "symbols": ["valueNoEq", "complexValue"], "postprocess":  ([value, op, ...rest]) => ({
             value: `${getDisplayValue(value)} ${op.value} ${rest.map(({value}) => value).join('')}`,
             type: 'complex',
-            from: [value, op, ...rest]
+            from: [makeDisplayValueObject(value), op, ...rest]
         }) },
-    {"name": "complexValueNoEq", "symbols": ["valueNoEq", "nestedObjectPath", "operator", "complexValue"], "postprocess":  ([value, path, op, ...rest]) => ({ 
-            value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')} ${op.value} ${rest.map(({value}) => value).join('')}`,
-            type: 'complex',
-            from: [value, op, ...path, ...rest]
-        }) },
-    {"name": "complexValueNoEq", "symbols": ["valueNoEq", "nestedObjectPath"], "postprocess": ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [value, ...path]})},
-    {"name": "complexValueNoEq", "symbols": ["valueNoEq"], "postprocess": ([value]) => ({value: getDisplayValue(value), type: value.type, from: [value]})},
+    {"name": "complexValueNoEq", "symbols": ["complexValue"], "postprocess": id},
     {"name": "valueNoEq", "symbols": ["token"], "postprocess": id},
     {"name": "valueNoEq", "symbols": ["string"], "postprocess": id},
     {"name": "valueNoEq", "symbols": ["functionCall"], "postprocess": id},
@@ -338,12 +348,12 @@ let ParserRules = [
     {"name": "value", "symbols": ["equation"], "postprocess": id},
     {"name": "value", "symbols": ["string"], "postprocess": id},
     {"name": "value", "symbols": ["functionCall"], "postprocess": id},
-    {"name": "explicitParameters", "symbols": ["array"], "postprocess": id},
+    {"name": "explicitParameters", "symbols": ["parameterArray"], "postprocess": id},
     {"name": "explicitParameters", "symbols": ["token"], "postprocess": id},
     {"name": "implicitParameters", "symbols": ["token"], "postprocess": id},
-    {"name": "array", "symbols": ["L_SQUARE", "items", "R_SQUARE"], "postprocess": ([, items]) => ({type: 'array', items})},
+    {"name": "parameterArray", "symbols": ["L_SQUARE", "items", "R_SQUARE"], "postprocess": ([, items]) => ({type: 'array', items})},
     {"name": "items", "symbols": ["item", "COMMA", "items"], "postprocess": ([hit,, rest]) => [hit, ...rest]},
-    {"name": "items", "symbols": ["item"], "postprocess": ([hit]) => [hit]},
+    {"name": "items", "symbols": ["item"]},
     {"name": "item", "symbols": ["object"], "postprocess": id},
     {"name": "item", "symbols": ["token"], "postprocess": id},
     {"name": "nestedObjectPath", "symbols": ["objectPath", "nestedObjectPath"], "postprocess": ([path, rest]) => [path, ...rest]},

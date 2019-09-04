@@ -9,9 +9,9 @@ R_CURLY -> _ "}" {% () => ['R_CURLY'] %}
 L_PAREN -> _ "(" {% () => ['L_PAREN'] %}
 R_PAREN -> _ ")" {% () => ['R_PAREN'] %}
 FAT_ARROW -> _ "=>" {% () => ['F_ARROW'] %}
+TILDE -> _ "~" {% () => ['TILDE'] %}
 RETURN -> "RETURN"i __ {% () => ['RETURN'] %}
 AS -> __ "AS"i {% () => ['AS'] %}
-TILDE -> __ "~" {% () => ['TILDE'] %}
 
 # Operators
 DOT -> _ "." {% () => ['DOT'] %}
@@ -36,6 +36,7 @@ CONTAINS -> __ "CONTAINS"i __ {% () => ['CONTAINS'] %}
 DISTINCT -> __ "DISTINCT"i __ {% () => ['DISTINCT'] %}
 ENDS_WITH -> __ "ENDS"i __ "WITH"i __ {% () => ['ENDS_WITH'] %}
 IN -> __ "IN"i __ {% () => ['IN'] %}
+NOT_IN -> __ "NOT"i __ "IN"i __ {% () => ['NOT_IN'] %}
 IS_NOT_NULL -> __ "IS"i __ "NOT"i __ "NULL"i __ {% () => ['IS_NOT_NULL'] %}
 IS_NULL -> __ "IS"i __ "NULL"i __ {% () => ['IS_NULL'] %}
 NOT -> __ "NOT"i __ {% () => ['NOT'] %}

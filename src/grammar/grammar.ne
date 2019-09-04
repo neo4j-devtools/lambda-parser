@@ -29,38 +29,48 @@ returnValues -> returnValue COMMA returnValues {% ([hit,, rest]) => [hit, ...res
 returnValue -> complexValue AS token {% ([original,, name]) => ({...original, alias: name.value}) %}
     | complexValue {% id %}
 
+complexValuesArray -> L_SQUARE complexValuesArrayItems R_SQUARE {% ([, values]) => ({
+        type: 'array',
+        value: `[${values.map(({value}) => value).join(', ')}]`,
+        items: [...values]
+    })%}
+
+complexValuesArrayItems -> complexValue COMMA complexValuesArrayItems {% ([value,,values]) => [value, ...values] %}
+    | complexValue
+
 complexValue -> 
-    value operator complexValueNoEq {% ([value, op, ...rest]) => ({
+    # remove ambiguity between operators and equations
+    value operator complexValue {% ([value, op, ...rest]) => ({
         value: `${getDisplayValue(value)} ${op.value} ${rest.map(({value}) => value).join('')}`,
         type: 'complex',
-        from: [value, op, ...rest]
+        from: [makeDisplayValueObject(value), op, ...rest]
     }) %}
     | value nestedObjectPath operator complexValue {% ([value, path, op, ...rest]) => ({ 
         value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')} ${op.value} ${rest.map(({value}) => value).join('')}`,
         type: 'complex',
-        from: [value, op, ...path, ...rest]
+        from: [makeDisplayValueObject(value), op, ...path.map(makeDisplayValueObject), ...rest]
     }) %}
-    | value nestedObjectPath {% ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [value, ...path]}) %}
-    | value {% ([value]) => ({value: getDisplayValue(value), type: value.type, from: [value]}) %}
+    | value nestedObjectPath {% ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [makeDisplayValueObject(value), ...path.map(makeDisplayValueObject)]}) %}
+    | complexValuesArray {% id %}
+    | value {% ([value]) => makeDisplayValueObject(value) %}
 
 # ugly but efficient. Lets revisit when we have real cypher parser
+# not working!
 complexValueNoEq -> 
-    valueNoEq operator complexValue {% ([value, op, ...rest]) => ({
+    valueNoEq complexValue {% ([value, op, ...rest]) => ({
         value: `${getDisplayValue(value)} ${op.value} ${rest.map(({value}) => value).join('')}`,
         type: 'complex',
-        from: [value, op, ...rest]
+        from: [makeDisplayValueObject(value), op, ...rest]
     }) %}
-    | valueNoEq nestedObjectPath operator complexValue {% ([value, path, op, ...rest]) => ({ 
-        value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')} ${op.value} ${rest.map(({value}) => value).join('')}`,
-        type: 'complex',
-        from: [value, op, ...path, ...rest]
-    }) %}
-    | valueNoEq nestedObjectPath {% ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [value, ...path]}) %}
-    | valueNoEq {% ([value]) => ({value: getDisplayValue(value), type: value.type, from: [value]}) %}
+    | complexValue {% id %}
 
 # Temporary stopgap until we can figure out a better strategy for strings
 # Lets revisit when we have real cypher parser
 @{%
+function makeDisplayValueObject(value) {
+    return ({value: getDisplayValue(value), type: value.type, from: [value]})
+}
+
 function getDisplayValue(token) {
     return token.type === 'string' ? `"${token.value}"` : `${token.value}`
 }
@@ -80,18 +90,18 @@ value -> token {% id %}
 
 # [x]
 # x
-explicitParameters -> array {% id %}
+explicitParameters -> parameterArray {% id %}
     | token {% id %}
 
 # x
 implicitParameters -> token {% id %}
 
 # [foo, {bar, baz}]
-array -> L_SQUARE items R_SQUARE {% ([, items]) => ({type: 'array', items}) %}
+parameterArray -> L_SQUARE items R_SQUARE {% ([, items]) => ({type: 'array', items}) %}
 
 # foo, bar, baz
 items -> item COMMA items {% ([hit,, rest]) => [hit, ...rest] %}
-    | item {% ([hit]) => [hit] %}
+    | item
 
 # foo
 # {foo}
