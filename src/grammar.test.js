@@ -14,6 +14,7 @@ describe('lambda-parser', () => {
                     body: {
                         returnValues: [{
                             value: '"foo"',
+                            type: 'string',
                             from: [{
                                 type: 'string',
                                 value: 'foo'
@@ -36,6 +37,7 @@ describe('lambda-parser', () => {
                     body: {
                         returnValues: [{
                             value: '"foo"',
+                            type: 'string',
                             from: [{
                                 type: 'string',
                                 value: 'foo'
@@ -62,6 +64,7 @@ describe('lambda-parser', () => {
                     body: {
                         returnValues: [{
                             value: '1',
+                            type: 'number',
                             from: [{
                                 type: 'number',
                                 value: 1
@@ -84,6 +87,7 @@ describe('lambda-parser', () => {
                     body: {
                         returnValues: [{
                             value: '1.1',
+                            type: 'number',
                             from: [{
                                 type: 'number',
                                 value: 1.1
@@ -106,6 +110,7 @@ describe('lambda-parser', () => {
                     body: {
                         returnValues: [{
                             value: 'rand()',
+                            type: 'functionCall',
                             from: [{
                                 name: 'rand',
                                 value: 'rand()',
@@ -130,14 +135,15 @@ describe('lambda-parser', () => {
                     body: {
                         returnValues: [{
                             value: 'foo(a,b,c)',
+                            type: 'functionCall',
                             from: [{
                                 name: 'foo',
                                 value: 'foo(a,b,c)',
                                 type: 'functionCall',
                                 args: [
-                                    {type: 'token', value: 'a'},
-                                    {type: 'token', value: 'b'},
-                                    {type: 'token', value: 'c'}
+                                    {type: 'token', value: 'a', from: [{type: 'token', value: 'a'}]},
+                                    {type: 'token', value: 'b', from: [{type: 'token', value: 'b'}]},
+                                    {type: 'token', value: 'c', from: [{type: 'token', value: 'c'}]}
                                 ]
                             }]
                         }]
@@ -158,14 +164,15 @@ describe('lambda-parser', () => {
                     body: {
                         returnValues: [{
                             value: 'foo(a,b,c)',
+                            type: 'functionCall',
                             from: [{
                                 name: 'foo',
                                 value: 'foo(a,b,c)',
                                 type: 'functionCall',
                                 args: [
-                                    {type: 'token', value: 'a'},
-                                    {type: 'token', value: 'b'},
-                                    {type: 'token', value: 'c'}
+                                    {type: 'token', value: 'a', from: [{type: 'token', value: 'a'}]},
+                                    {type: 'token', value: 'b', from: [{type: 'token', value: 'b'}]},
+                                    {type: 'token', value: 'c', from: [{type: 'token', value: 'c'}]}
                                 ]
                             }]
                         }]
@@ -187,6 +194,7 @@ describe('lambda-parser', () => {
                         returnValues: [{
                             value: '"foo"',
                             alias: 'bar',
+                            type: 'string',
                             from: [{
                                 type: 'string',
                                 value: 'foo'
@@ -210,6 +218,7 @@ describe('lambda-parser', () => {
                         returnValues: [{
                             value: 'rand()',
                             alias: 'bar',
+                            type: 'functionCall',
                             from: [{
                                 name: 'rand',
                                 value: 'rand()',
@@ -235,6 +244,7 @@ describe('lambda-parser', () => {
                         returnValues: [{
                             value: 'rand()',
                             alias: 'bar',
+                            type: 'functionCall',
                             from: [{
                                 name: 'rand',
                                 value: 'rand()',
@@ -266,13 +276,14 @@ describe('lambda-parser', () => {
                     body: {
                         returnValues: [{
                             value: 'COLLECT(label)[0]',
+                            type: 'path',
                             from: [
                                 {
                                     type: 'functionCall',
                                     name: 'COLLECT',
                                     value: 'COLLECT(label)',
                                     args: [
-                                        {type: 'token', value: 'label'}
+                                        {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                     ]
                                 },
                                 {
@@ -301,13 +312,14 @@ describe('lambda-parser', () => {
                     body: {
                         returnValues: [{
                             value: 'COLLECT(label)["123 hurr durr"]',
+                            type: 'path',
                             from: [
                                 {
                                     type: 'functionCall',
                                     name: 'COLLECT',
                                     value: 'COLLECT(label)',
                                     args: [
-                                        {type: 'token', value: 'label'}
+                                        {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                     ]
                                 },
                                 {
@@ -336,13 +348,14 @@ describe('lambda-parser', () => {
                     body: {
                         returnValues: [{
                             value: 'COLLECT(label).foo',
+                            type: 'path',
                             from: [
                                 {
                                     type: 'functionCall',
                                     name: 'COLLECT',
                                     value: 'COLLECT(label)',
                                     args: [
-                                        {type: 'token', value: 'label'}
+                                        {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                     ]
                                 },
                                 {
@@ -372,13 +385,14 @@ describe('lambda-parser', () => {
                         returnValues: [
                             {
                                 value: 'COLLECT(label)[0].foo["yolo"]',
+                                type: 'path',
                                 from: [
                                     {
                                         type: 'functionCall',
                                         name: 'COLLECT',
                                         value: 'COLLECT(label)',
                                         args: [
-                                            {type: 'token', value: 'label'}
+                                            {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                         ]
                                     },
                                     {
@@ -419,13 +433,14 @@ describe('lambda-parser', () => {
                         returnValues: [{
                             value: 'COLLECT(label)[0]',
                             alias: 'foo',
+                            type: 'path',
                             from: [
                                 {
                                     type: 'functionCall',
                                     name: 'COLLECT',
                                     value: 'COLLECT(label)',
                                     args: [
-                                        {type: 'token', value: 'label'}
+                                        {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                     ]
                                 },
                                 {
@@ -456,6 +471,7 @@ describe('lambda-parser', () => {
                         returnValues: [
                             {
                                 value: '"foo"',
+                                type: 'string',
                                 from: [{
                                     type: 'string',
                                     value: 'foo'
@@ -481,6 +497,7 @@ describe('lambda-parser', () => {
                         returnValues: [
                             {
                                 value: '"foo"',
+                                type: 'string',
                                 from: [{
                                     type: 'string',
                                     value: 'foo'
@@ -510,6 +527,7 @@ describe('lambda-parser', () => {
                         returnValues: [
                             {
                                 value: '1',
+                                type: 'number',
                                 from: [{
                                     type: 'number',
                                     value: 1
@@ -535,6 +553,7 @@ describe('lambda-parser', () => {
                         returnValues: [
                             {
                                 value: '1.1',
+                                type: 'number',
                                 from: [{
                                     type: 'number',
                                     value: 1.1
@@ -560,6 +579,7 @@ describe('lambda-parser', () => {
                         returnValues: [
                             {
                                 value: 'rand()',
+                                type: 'functionCall',
                                 from: [{
                                     name: 'rand',
                                     value: 'rand()',
@@ -587,14 +607,15 @@ describe('lambda-parser', () => {
                         returnValues: [
                             {
                                 value: 'foo(a,b,c)',
+                                type: 'functionCall',
                                 from: [{
                                     name: 'foo',
                                     value: 'foo(a,b,c)',
                                     type: 'functionCall',
                                     args: [
-                                        {type: 'token', value: 'a'},
-                                        {type: 'token', value: 'b'},
-                                        {type: 'token', value: 'c'}
+                                        {type: 'token', value: 'a', from: [{type: 'token', value: 'a'}]},
+                                        {type: 'token', value: 'b', from: [{type: 'token', value: 'b'}]},
+                                        {type: 'token', value: 'c', from: [{type: 'token', value: 'c'}]}
                                     ]
                                 }]
                             }
@@ -618,14 +639,15 @@ describe('lambda-parser', () => {
                         returnValues: [
                             {
                                 value: 'foo(a,b,c)',
+                                type: 'functionCall',
                                 from: [{
                                     name: 'foo',
                                     value: 'foo(a,b,c)',
                                     type: 'functionCall',
                                     args: [
-                                        {type: 'token', value: 'a'},
-                                        {type: 'token', value: 'b'},
-                                        {type: 'token', value: 'c'}
+                                        {type: 'token', value: 'a', from: [{type: 'token', value: 'a'}]},
+                                        {type: 'token', value: 'b', from: [{type: 'token', value: 'b'}]},
+                                        {type: 'token', value: 'c', from: [{type: 'token', value: 'c'}]}
                                     ]
                                 }]
                             }
@@ -650,6 +672,7 @@ describe('lambda-parser', () => {
                             {
                                 value: '"foo"',
                                 alias: 'bar',
+                                type: 'string',
                                 from: [{
                                     type: 'string',
                                     value: 'foo'
@@ -676,6 +699,7 @@ describe('lambda-parser', () => {
                             {
                                 value: 'rand()',
                                 alias: 'bar',
+                                type: 'functionCall',
                                 from: [{
                                     name: 'rand',
                                     type: 'functionCall',
@@ -704,6 +728,7 @@ describe('lambda-parser', () => {
                             {
                                 value: 'rand()',
                                 alias: 'bar',
+                                type: 'functionCall',
                                 from: [{
                                     name: 'rand',
                                     type: 'functionCall',
@@ -732,6 +757,7 @@ describe('lambda-parser', () => {
                             {
                                 value: 'rand()',
                                 alias: 'bar',
+                                type: 'functionCall',
                                 from: [{
                                     name: 'rand',
                                     type: 'functionCall',
@@ -762,6 +788,7 @@ describe('lambda-parser', () => {
                             {
                                 value: 'rand()',
                                 alias: 'bar',
+                                type: 'functionCall',
                                 from: [{
                                     name: 'rand',
                                     type: 'functionCall',
@@ -800,6 +827,7 @@ asdjokajsd
                             {
                                 value: 'rand()',
                                 alias: 'bar',
+                                type: 'functionCall',
                                 from: [{
                                     name: 'rand',
                                     value: 'rand()',
@@ -833,6 +861,7 @@ asdjokajsd
                             {
                                 value: 'rand()',
                                 alias: 'bar',
+                                type: 'functionCall',
                                 from: [{
                                     type: 'functionCall',
                                     name: 'rand',
@@ -868,6 +897,7 @@ asdjokajsd
                             {
                                 value: 'rand()',
                                 alias: 'bar',
+                                type: 'functionCall',
                                 from: [{
                                     type: 'functionCall',
                                     name: 'rand',
@@ -907,6 +937,7 @@ asdjokajsd
                             {
                                 value: 'rand()',
                                 alias: 'bar',
+                                type: 'functionCall',
                                 from: [{
                                     type: 'functionCall',
                                     name: 'rand',
@@ -947,6 +978,7 @@ asdjokajsd
                         returnValues: [
                             {
                                 value: 'rand()',
+                                type: 'functionCall',
                                 from: [{
                                     type: 'functionCall',
                                     name: 'rand',
@@ -982,6 +1014,7 @@ asdjokajsd
                             {
                                 value: 'rand()',
                                 alias: 'bar',
+                                type: 'functionCall',
                                 from: [{
                                     type: 'functionCall',
                                     name: 'rand',
@@ -1016,6 +1049,7 @@ asdjokajsd
                         returnValues: [
                             {
                                 value: 'bar',
+                                type: 'token',
                                 from: [{
                                     type: 'token',
                                     value: 'bar'
@@ -1050,6 +1084,7 @@ asdjokajsd
                             {
                                 value: 'rand()',
                                 alias: 'bar',
+                                type: 'functionCall',
                                 from: [
                                     {
                                         type: 'functionCall',
@@ -1087,6 +1122,7 @@ asdjokajsd
                             {
                                 value: '"foo"',
                                 alias: 'bar',
+                                type: 'string',
                                 from: [{
                                     type: 'string',
                                     value: 'foo'
@@ -1128,13 +1164,14 @@ asdjokajsd
                         returnValues: [
                             {
                                 value: 'COLLECT(label)[0]',
+                                type: 'path',
                                 from: [
                                     {
                                         type: 'functionCall',
                                         name: 'COLLECT',
                                         value: 'COLLECT(label)',
                                         args: [
-                                            {type: 'token', value: 'label'}
+                                            {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                         ]
                                     },
                                     {
@@ -1179,13 +1216,14 @@ asdjokajsd
                         returnValues: [
                             {
                                 value: 'COLLECT(label)[0]',
+                                type: 'path',
                                 from: [
                                     {
                                         type: 'functionCall',
                                         name: 'COLLECT',
                                         value: 'COLLECT(label)',
                                         args: [
-                                            {type: 'token', value: 'label'}
+                                            {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                         ]
                                     },
                                     {
@@ -1226,13 +1264,14 @@ asdjokajsd
                         returnValues: [
                             {
                                 value: 'COLLECT(label)[0]',
+                                type: 'path',
                                 from: [
                                     {
                                         type: 'functionCall',
                                         name: 'COLLECT',
                                         value: 'COLLECT(label)',
                                         args: [
-                                            {type: 'token', value: 'label'}
+                                            {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                         ]
                                     },
                                     {
@@ -1273,13 +1312,14 @@ asdjokajsd
                         returnValues: [
                             {
                                 value: 'COLLECT(label)["123 hurr durr"]',
+                                type: 'path',
                                 from: [
                                     {
                                         type: 'functionCall',
                                         value: 'COLLECT(label)',
                                         name: 'COLLECT',
                                         args: [
-                                            {type: 'token', value: 'label'}
+                                            {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                         ]
                                     },
                                     {
@@ -1320,13 +1360,14 @@ asdjokajsd
                         returnValues: [
                             {
                                 value: 'COLLECT(label).foo',
+                                type: 'path',
                                 from: [
                                     {
                                         type: 'functionCall',
                                         name: 'COLLECT',
                                         value: 'COLLECT(label)',
                                         args: [
-                                            {type: 'token', value: 'label'}
+                                            {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                         ]
                                     },
                                     {
@@ -1367,13 +1408,14 @@ asdjokajsd
                         returnValues: [
                             {
                                 value: 'COLLECT(label)[0].foo["yolo"]',
+                                type: 'path',
                                 from: [
                                     {
                                         type: 'functionCall',
                                         name: 'COLLECT',
                                         value: 'COLLECT(label)',
                                         args: [
-                                            {type: 'token', value: 'label'}
+                                            {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                         ]
                                     },
                                     {
@@ -1425,13 +1467,14 @@ asdjokajsd
                             {
                                 value: 'COLLECT(label)[0]',
                                 alias: 'foo',
+                                type: 'path',
                                 from: [
                                     {
                                         type: 'functionCall',
                                         name: 'COLLECT',
                                         value: 'COLLECT(label)',
                                         args: [
-                                            {type: 'token', value: 'label'}
+                                            {type: 'token', value: 'label', from: [{type: 'token', value: 'label'}]}
                                         ]
                                     },
                                     {

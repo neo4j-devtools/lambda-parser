@@ -317,8 +317,8 @@ let ParserRules = [
             type: 'complex',
             from: [value, op, ...path, ...rest]
         }) },
-    {"name": "complexValue", "symbols": ["value", "nestedObjectPath"], "postprocess": ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, from: [value, ...path]})},
-    {"name": "complexValue", "symbols": ["value"], "postprocess": ([value]) => ({value: getDisplayValue(value), from: [value]})},
+    {"name": "complexValue", "symbols": ["value", "nestedObjectPath"], "postprocess": ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [value, ...path]})},
+    {"name": "complexValue", "symbols": ["value"], "postprocess": ([value]) => ({value: getDisplayValue(value), type: value.type, from: [value]})},
     {"name": "value", "symbols": ["token"], "postprocess": id},
     {"name": "value", "symbols": ["equation"], "postprocess": id},
     {"name": "value", "symbols": ["string"], "postprocess": id},
@@ -345,8 +345,8 @@ let ParserRules = [
     {"name": "objectKey", "symbols": ["token"], "postprocess": id},
     {"name": "functionCall", "symbols": ["token", "L_PAREN", "functionArgs", "R_PAREN"], "postprocess": ([name,, args]) => ({type: 'functionCall', name: name.value, value: `${name.value}(${args.map(({value}) => value).join()})`, args})},
     {"name": "functionCall", "symbols": ["token", "L_PAREN", "R_PAREN"], "postprocess": ([name]) => ({type: 'functionCall', name: name.value, value: `${name.value}()`, args: []})},
-    {"name": "functionArgs", "symbols": ["token", "COMMA", "functionArgs"], "postprocess": ([token,, rest]) => [token, ...rest]},
-    {"name": "functionArgs", "symbols": ["token"], "postprocess": ([token]) => [token]}
+    {"name": "functionArgs", "symbols": ["complexValue", "COMMA", "functionArgs"], "postprocess": ([value,, rest]) => [value, ...rest]},
+    {"name": "functionArgs", "symbols": ["complexValue"], "postprocess": ([value]) => [value]}
 ];
 let ParserStart = "lambda";
 export default { Lexer, ParserRules, ParserStart };

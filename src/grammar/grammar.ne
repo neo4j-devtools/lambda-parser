@@ -40,8 +40,8 @@ complexValue ->
         type: 'complex',
         from: [value, op, ...path, ...rest]
     }) %}
-    | value nestedObjectPath {% ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, from: [value, ...path]}) %}
-    | value {% ([value]) => ({value: getDisplayValue(value), from: [value]}) %}
+    | value nestedObjectPath {% ([value, path]) => ({ value: `${getDisplayValue(value)}${path.map(({value}) => value).join('')}`, type: 'path', from: [value, ...path]}) %}
+    | value {% ([value]) => ({value: getDisplayValue(value), type: value.type, from: [value]}) %}
 
 # Temporary stopgap until we can figure out a better strategy for strings
 @{%
@@ -107,5 +107,7 @@ functionCall -> token L_PAREN functionArgs R_PAREN {% ([name,, args]) => ({type:
 
 # foo, bar, baz
 # @todo: add numericals and equations
-functionArgs -> token COMMA functionArgs {% ([token,, rest]) => [token, ...rest] %}
-    | token {% ([token]) => [token] %}
+# @todo: introduce new form of token to represent operations on strings, numbers, tokens etc
+# @todo: handle ambiguity between complexValue and equation
+functionArgs -> complexValue COMMA functionArgs {% ([value,, rest]) => [value, ...rest] %}
+    | complexValue {% ([value]) => [value] %}
