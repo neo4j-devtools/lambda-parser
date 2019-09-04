@@ -127,7 +127,5 @@ functionCall -> token L_PAREN functionArgs R_PAREN {% ([name,, args]) => ({type:
     | token L_PAREN R_PAREN {% ([name]) => ({type: 'functionCall', name: name.value, value: `${name.value}()`, args: []}) %}
 
 # foo, bar, baz
-# @todo: add numericals and equations
-# @todo: introduce new form of token to represent operations on strings, numbers, tokens etc
 functionArgs -> complexValue COMMA functionArgs {% ([value,, rest]) => [value, ...rest] %}
     | complexValue {% ([value]) => [value] %}
