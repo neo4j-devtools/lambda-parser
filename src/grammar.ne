@@ -11,13 +11,12 @@ lambda -> explicitParameters FAT_ARROW explicitReturn {% ([parameters,,body]) =>
     | implicitParameters FAT_ARROW implicitReturn {% ([parameters,,body]) => ({type: 'lambda', variant: 'implicit', parameters, body}) %}
 
 # { RETURN ... }
-explicitReturn -> L_CURLY singleLine multiLine __ RETURN returnValues R_CURLY {% ([,statement1, statement2,,, returnValues]) => ({statement: [statement1, statement2].join('\n').trim(), returnValues}) %}
-    | L_CURLY multiLine __ RETURN returnValues R_CURLY {% ([,statement,,, returnValues]) => ({statement, returnValues}) %}
-    | L_CURLY singleLine __ RETURN returnValues R_CURLY {% ([,statement,,, returnValues]) => ({statement, returnValues}) %}
-    | L_CURLY _ RETURN returnValues R_CURLY {% ([,,, returnValues]) => ({statement: '', returnValues}) %}
+explicitReturn -> L_CURLY singleLine multiLine R_CURLY {% ([,statement1, statement2]) => ({statement: [statement1, statement2].join('\n').trim(), returnValues: []}) %}
+    | L_CURLY multiLine R_CURLY {% ([,statement]) => ({statement, returnValues: []}) %}
+    | L_CURLY singleLine R_CURLY {% ([,statement]) => ({statement, returnValues: []}) %}
 
 # ...
-implicitReturn -> returnValue {% ([returnValue]) => ({returnValues: [returnValue]}) %}
+implicitReturn -> singleLine {% ([statement], _, reject) => statement.trim().startsWith('{') ? reject : ({returnValues: []}) %}
 
 # RETURN hi AS foo, rand() AS bar
 returnValues -> returnValue COMMA returnValues {% ([hit,, rest]) => [hit, ...rest] %}
@@ -105,6 +104,7 @@ chars -> [a-zA-Z] [a-zA-Z0-9]:* {% ([value, rest]) => `${value}${rest.join('')}`
 
 multiLine -> newLine singleLine multiLine {% ([, hit, rest], _ , reject) => rest ? [hit, rest].join('\n').trim() : reject %}
     | newLine multiLine {% ([hit, rest]) => [hit, rest].join('\n').trim() %} # щ（ﾟДﾟщ）
+    | newLine singleLine {% ([hit, rest]) => [hit, rest].join('\n').trim() %}
     | newLine {% id %}
 
 singleLine -> [^\n]:+ {% ([hit], _, reject) => hit.join('').trim() %}
