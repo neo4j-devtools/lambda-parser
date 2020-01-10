@@ -260,6 +260,45 @@ describe('lambda-parser', () => {
                 }
             ])
         });
+
+        test('Supports returning objects wrapped in parens', () => {
+            const query = `x => ({foo: 1})`;
+
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        returnValues: []
+                    }
+                }
+            ])
+        });
+
+        test('Supports returning objects wrapped in parens even with new lines', () => {
+            const query = `x => ({
+                foo: 1
+            })`;
+
+            expect(parseLambda(query)).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x'
+                    },
+                    body: {
+                        returnValues: []
+                    }
+                },
+                expect.anything()
+            ])
+        });
     });
 
     describe('explicit returns', () => {
