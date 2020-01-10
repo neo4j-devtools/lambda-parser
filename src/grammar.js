@@ -148,6 +148,7 @@ let ParserRules = [
     {"name": "explicitReturn", "symbols": ["L_CURLY", "multiLine", "R_CURLY"], "postprocess": ([,statement]) => ({statement, returnValues: []})},
     {"name": "explicitReturn", "symbols": ["L_CURLY", "singleLine", "R_CURLY"], "postprocess": ([,statement]) => ({statement, returnValues: []})},
     {"name": "implicitReturn", "symbols": ["singleLine"], "postprocess": ([statement], _, reject) => statement.trim().startsWith('{') ? reject : ({returnValues: []})},
+    {"name": "implicitReturn", "symbols": ["L_PAREN", "L_CURLY", "multiLine", "R_CURLY", "R_PAREN"], "postprocess": () => ({returnValues: []})},
     {"name": "returnValues", "symbols": ["returnValue", "COMMA", "returnValues"], "postprocess": ([hit,, rest]) => [hit, ...rest]},
     {"name": "returnValues", "symbols": ["returnValue"]},
     {"name": "returnValue", "symbols": ["value", "AS", "token"], "postprocess": ([original,, name]) => ({...original, alias: name.value})},

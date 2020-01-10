@@ -17,6 +17,7 @@ explicitReturn -> L_CURLY singleLine multiLine R_CURLY {% ([,statement1, stateme
 
 # ...
 implicitReturn -> singleLine {% ([statement], _, reject) => statement.trim().startsWith('{') ? reject : ({returnValues: []}) %}
+    | L_PAREN L_CURLY multiLine R_CURLY R_PAREN {% () => ({returnValues: []}) %}
 
 # RETURN hi AS foo, rand() AS bar
 returnValues -> returnValue COMMA returnValues {% ([hit,, rest]) => [hit, ...rest] %}
