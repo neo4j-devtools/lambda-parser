@@ -34,6 +34,22 @@ describe('lambda-parser', () => {
             ])
         });
 
+        test('support tokens with underscores in their names', () => {
+            expect(parseLambda('x_1 => "foo"')).toEqual([
+                {
+                    type: 'lambda',
+                    variant: 'implicit',
+                    parameters: {
+                        type: 'token',
+                        value: 'x_1'
+                    },
+                    body: {
+                        returnValues: []
+                    }
+                }
+            ])
+        });
+
         test('does not support tokens with numbers first in their names', () => {
             expect(() => parseLambda('1x => "foo"')).toThrow('Syntax error at line 1 col 1:');
         });
