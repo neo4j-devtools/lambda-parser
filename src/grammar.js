@@ -50,7 +50,7 @@ let ParserRules = [
     {"name": "sstrchar", "symbols": [{"literal":"\\"}, "strescape"], "postprocess": function(d) { return JSON.parse("\""+d.join("")+"\""); }},
     {"name": "sstrchar$string$1", "symbols": [{"literal":"\\"}, {"literal":"'"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "sstrchar", "symbols": ["sstrchar$string$1"], "postprocess": function(d) {return "'"; }},
-    {"name": "strescape", "symbols": [/["\\\/bfnrt]/], "postprocess": id},
+    {"name": "strescape", "symbols": [/["\\/bfnrt]/], "postprocess": id},
     {"name": "strescape", "symbols": [{"literal":"u"}, /[a-fA-F0-9]/, /[a-fA-F0-9]/, /[a-fA-F0-9]/, /[a-fA-F0-9]/], "postprocess": 
         function(d) {
             return d.join("");
@@ -193,7 +193,7 @@ let ParserRules = [
     {"name": "number", "symbols": ["_", "decimal"], "postprocess": ([, value]) => ({type: 'number', value})},
     {"name": "token", "symbols": ["_", "chars"], "postprocess": ([, value]) => ({type: 'token', value})},
     {"name": "chars$ebnf$1", "symbols": []},
-    {"name": "chars$ebnf$1", "symbols": ["chars$ebnf$1", /[a-zA-Z0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "chars$ebnf$1", "symbols": ["chars$ebnf$1", /[_a-zA-Z0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "chars", "symbols": [/[a-zA-Z]/, "chars$ebnf$1"], "postprocess": ([value, rest]) => `${value}${rest.join('')}`},
     {"name": "multiLine", "symbols": ["newLine", "singleLine", "multiLine"], "postprocess": ([, hit, rest], _ , reject) => rest ? [hit, rest].join('\n').trim() : reject},
     {"name": "multiLine", "symbols": ["newLine", "multiLine"], "postprocess": ([hit, rest]) => [hit, rest].join('\n').trim()},
