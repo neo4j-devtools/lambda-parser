@@ -101,7 +101,7 @@ number -> _ decimal {% ([, value]) => ({type: 'number', value}) %}
 
 token -> _ chars {% ([, value]) => ({type: 'token', value}) %}
 
-chars -> [a-zA-Z] [_a-zA-Z0-9]:* {% ([value, rest]) => `${value}${rest.join('')}` %}
+chars -> [_a-zA-Z] [_a-zA-Z0-9]:* {% ([value, rest]) => `${value}${rest.join('')}` %}
 
 multiLine -> newLine singleLine multiLine {% ([, hit, rest], _ , reject) => rest ? [hit, rest].join('\n').trim() : reject %}
     | newLine multiLine {% ([hit, rest]) => [hit, rest].join('\n').trim() %} # щ（ﾟДﾟщ）

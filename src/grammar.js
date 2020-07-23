@@ -194,7 +194,7 @@ let ParserRules = [
     {"name": "token", "symbols": ["_", "chars"], "postprocess": ([, value]) => ({type: 'token', value})},
     {"name": "chars$ebnf$1", "symbols": []},
     {"name": "chars$ebnf$1", "symbols": ["chars$ebnf$1", /[_a-zA-Z0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "chars", "symbols": [/[a-zA-Z]/, "chars$ebnf$1"], "postprocess": ([value, rest]) => `${value}${rest.join('')}`},
+    {"name": "chars", "symbols": [/[_a-zA-Z]/, "chars$ebnf$1"], "postprocess": ([value, rest]) => `${value}${rest.join('')}`},
     {"name": "multiLine", "symbols": ["newLine", "singleLine", "multiLine"], "postprocess": ([, hit, rest], _ , reject) => rest ? [hit, rest].join('\n').trim() : reject},
     {"name": "multiLine", "symbols": ["newLine", "multiLine"], "postprocess": ([hit, rest]) => [hit, rest].join('\n').trim()},
     {"name": "multiLine", "symbols": ["newLine", "singleLine"], "postprocess": ([hit, rest]) => [hit, rest].join('\n').trim()},
