@@ -26,4 +26,4 @@ $ npm run railroad
 ```
 
 ## View railroad
-http://htmlpreview.github.io/?https://github.com/huboneo/lambda-parser/blob/master/railroad.html
+http://htmlpreview.github.io/?https://github.com/neo4j-devtools/lambda-parser/blob/master/railroad.html
