@@ -22,7 +22,7 @@
     "@babel/core": "7.5.5",
     "@babel/preset-env": "7.5.5",
     "babel-jest": "24.9.0",
-    "jest": "24.9.0"
+    "jest": "29.6.1"
   },
   "dependencies": {
     "nearley": "2.18.0"
